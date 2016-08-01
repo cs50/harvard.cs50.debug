@@ -25,7 +25,6 @@ define(function(require, exports, module) {
                 caption: "Debug50",
                 debugger: "gdb",
                 $debugDefaultState: true,
-                executable: '"$file"',
                 retryCount: 100,
                 retryInterval: 300,
                 script: ['node /home/ubuntu/bin/c9gdbshim.js "$file" $args'],
