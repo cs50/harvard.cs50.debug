@@ -50,24 +50,6 @@ define(function(require, exports, module) {
                         commands.exec("runlast");
                     });
 
-                    // run.detectRunner({ path: src }, function(err, runner) {
-                    //     if (err)
-                    //         showError("Could not find a runner for " + src + "!");
-
-                    //     console.log(runner);
-
-                    //     // force the debugger to show
-                    //     runner.$debugDefaultState = true;
-
-                    //     // concat any args
-                    //     var exec = src;
-                    //     if (args.length > 2)
-                    //         exec += " " + args.slice(2).join(" ");
-
-                    //     // set runner and command as "last run", and execute it
-                    //     rungui.lastRun = [runner, exec];
-                    //     commands.exec("runlast");
-                    // });
                 }
             }, plugin);
 
