@@ -37,7 +37,7 @@ define(function(require, exports, module) {
                 hint: "Pass args via command",
                 group: "General",
                 exec: function(args) {
-                    // args[0] is CWD, args[1..n] are args to command
+                    // args[0] is CWD, args[1..n] are args to c9 command
                     if (args.length < 2)
                         showError("Please enter a filename to debug!");
 
