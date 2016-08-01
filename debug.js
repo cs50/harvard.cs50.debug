@@ -68,7 +68,8 @@ define(function(require, exports, module) {
         }
 
         function gdb50OutputToCLI() {
-             var i = 0;
+            // to execute:
+            // c9 exec gdb50start; node ~/bin/c9gdbshim.js BIN; c9 exec gdb50stop
             commands.addCommand({
                 name: "gdb50start",
                 hint: "running our debugger",
@@ -82,7 +83,7 @@ define(function(require, exports, module) {
                         env: {},
                         args: [],
                         debug: true
-                    }, "__cs50outputgdbdummy"+ (i++), function(err) {
+                    }, "__cs50outputgdbdummy", function(err) {
                         process.running = process.STARTED;
                         console.log(err);});
                 }
