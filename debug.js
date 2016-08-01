@@ -37,14 +37,14 @@ define(function(require, exports, module) {
                 hint: "Pass args via command",
                 group: "General",
                 exec: function(args) {
-                    console.log("gdb50args",args);
+                    // args[0] is CWD, args[1..n] are args to command
                     if (args.length < 2)
                         showError("Please enter a filename to debug!");
 
-                    var src = args[1];
+                    // bin is second argument
+                    var exec = args[1];
 
-                    // concat any args
-                    var exec = src;
+                    // concat any arg for executable
                     if (args.length > 2)
                         exec += " " + args.slice(2).join(" ");
 
