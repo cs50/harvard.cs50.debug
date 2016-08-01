@@ -21,7 +21,7 @@ define(function(require, exports, module) {
             // dynamically add a runner that accepts bins and passes
             // directly to the GDB shim, reducing retries since
             // there's no compilation step
-            run.addRunner("gdb50", {
+            run.addRunner("Debug50", {
                 caption: "Debug50",
                 debugger: "gdb",
                 $debugDefaultState: true,
@@ -48,7 +48,7 @@ define(function(require, exports, module) {
                         exec += " " + args.slice(2).join(" ");
 
                     // set runner and command as "last run", and execute it
-                    run.getRunner("gdb50", function(err, runner) {
+                    run.getRunner("Debug50", function(err, runner) {
                         if (err)
                             return console.log(err);
 
