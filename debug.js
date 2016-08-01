@@ -1,5 +1,9 @@
 define(function(require, exports, module) {
-    main.consumes = ["Plugin", "commands", "dialog.error", "run", "run.gui"];
+    "use strict";
+
+    main.consumes = [
+        "Plugin", "commands", "dialog.error", "run", "run.gui"
+    ];
     main.provides = ["harvard.cs50.debug"];
     return main;
 
