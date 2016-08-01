@@ -66,8 +66,49 @@ define(function(require, exports, module) {
 
         }
 
+        function gdb50OutputToCLI() {
+             var i = 0;
+            commands.addCommand({
+                name: "gdb50start",
+                hint: "running our debugger",
+                group: "General",
+                exec: function () {
+                    process = debug.run({
+                        "debugger": "gdb"
+                    }, {
+                        path: "",
+                        cwd: "",
+                        env: {},
+                        args: [],
+                        debug: true
+                    }, "__cs50outputgdbdummy"+ (i++), function(err) {
+                        process.running = process.STARTED;
+                        console.log(err);});
+                }
+            }, plugin);
+
+            commands.addCommand({
+                name: "gdb50stop",
+                hint: "stopping our debugger",
+                group: "General",
+                exec: function () {
+                    console.log(process);
+                    debug && debug.stop();
+                    process.cleanUp();
+                    process && process.stop(function(err) {
+                        // process.emit("detach");
+                        // process.cleanup();
+                        err && console.log(err);
+                        console.log(process);
+                    });
+
+                }
+            }, plugin);
+        }
+
         function load() {
             gdb50ExecCommand();
+            gdb50OutputToCLI();
         }
 
         /***** Methods *****/
