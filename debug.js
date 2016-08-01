@@ -2,7 +2,7 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.error", "run", "run.gui", "settings", "util"
+        "Plugin", "commands", "dialog.error", "debugger", "run", "run.gui", "settings", "util"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -10,6 +10,7 @@ define(function(require, exports, module) {
     function main(options, imports, register) {
         var Plugin = imports.Plugin;
         var commands = imports.commands;
+        var debug = imports.debugger;
         var run = imports.run;
         var rungui = imports["run.gui"];
         var showError = imports["dialog.error"].show;
