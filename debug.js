@@ -14,6 +14,9 @@ define(function(require, exports, module) {
         var plugin = new Plugin("Ajax.org", main.consumes);
 
         function gdb50ExecCommand() {
+            // dynamically add a runner that accepts bins and passes
+            // directly to the GDB shim, reducing retries since
+            // there's no compilation step
             run.addRunner("gdb50", {
                 caption: "gdb50",
                 debugger: "gdb",
@@ -53,44 +56,6 @@ define(function(require, exports, module) {
                 }
             }, plugin);
 
-            var i = 0;
-            commands.addCommand({
-                name: "gdb50start",
-                hint: "running our debugger",
-                group: "General",
-                exec: function () {
-                    console.log(tabManager.focussedTab.document.getSession());
-                    process = debug.run({
-                        "debugger": "gdb"
-                    }, {
-                        path: "",
-                        cwd: "",
-                        env: {},
-                        args: [],
-                        debug: true
-                    }, "__cs50outputgdbdummy"+ (i++), function(err) {
-                        process.running = process.STARTED;
-                        console.log(err);});
-                }
-            }, plugin);
-
-            commands.addCommand({
-                name: "gdb50stop",
-                hint: "stopping our debugger",
-                group: "General",
-                exec: function () {
-                    console.log(process);
-                    debug && debug.stop();
-                    process.cleanUp();
-                    process && process.stop(function(err) {
-                        // process.emit("detach");
-                        // process.cleanup();
-                        err && console.log(err);
-                        console.log(process);
-                    });
-
-                }
-            }, plugin);
         }
 
         function load() {
