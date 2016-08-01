@@ -22,7 +22,7 @@ define(function(require, exports, module) {
             // directly to the GDB shim, reducing retries since
             // there's no compilation step
             run.addRunner("gdb50", {
-                caption: "gdb50",
+                caption: "Debug50",
                 debugger: "gdb",
                 $debugDefaultState: true,
                 executable: '"$file"',
