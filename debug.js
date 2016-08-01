@@ -33,7 +33,7 @@ define(function(require, exports, module) {
             }, run);
 
             commands.addCommand({
-                name: "gdb50args",
+                name: "gdb50new",
                 hint: "Pass args via command",
                 group: "General",
                 exec: function(args) {
