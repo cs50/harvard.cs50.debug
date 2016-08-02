@@ -135,8 +135,7 @@ define(function(require, exports, module) {
             if (process === null)
                 return false;
 
-            console.log(debug.state);
-            debug && debug.stop();
+            debug.stop();
             process.stop(function() {
                 process = null;
             });
@@ -183,9 +182,7 @@ define(function(require, exports, module) {
 
         /***** Register and define API *****/
 
-        plugin.freezePublicAPI({
-
-        });
+        plugin.freezePublicAPI({});
 
         register(null, {
             "harvard.cs50.debug": plugin
