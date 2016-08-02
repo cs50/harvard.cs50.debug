@@ -2,7 +2,8 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.error", "debugger", "run", "run.gui", "settings", "util"
+        "Plugin", "commands", "dialog.error", "debugger", "run", "run.gui",
+        "settings", "util"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -21,129 +22,154 @@ define(function(require, exports, module) {
 
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
+        var process = null;
 
-        function gdb50ExecCommand() {
-            settings.set("user/output/nosavequestion", "true");
-            // dynamically add a runner that accepts bins and passes
-            // directly to the GDB shim, reducing retries since
-            // there's no compilation step
-            run.addRunner("Debug50", {
-                caption: "Debug50",
+        /***** Methods *****/
+
+        /**
+         * Dynamically add runners for the gdb50* processes.
+         */
+        function createRunners() {
+            // GDB runner defaults; reduce retries due to no compilation
+            var gdbRunner = {
                 debugger: "gdb",
                 $debugDefaultState: true,
                 retryCount: 100,
                 retryInterval: 300,
-                script: ['node /home/ubuntu/bin/c9gdbshim.js "$file" $args'],
-                socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
-            }, run);
-
-            commands.addCommand({
-                name: "gdb50new",
-                hint: "Pass args via command",
-                group: "General",
-                exec: function(args) {
-                    // args[0] is CWD, args[1..n] are args to c9 command
-                    if (args.length < 2)
-                        return showError("Please enter a filename to debug!");
-
-                    // cwd is first arg, bin is second argument
-                    var exec = util.escapeShell(Path.join(args[0], args[1]));
-
-                    // concat any arg for executable
-                    if (args.length > 2)
-                        exec += " " + args.slice(2).join(" ");
-
-                    // set runner and command as "last run", and execute it
-                    run.getRunner("Debug50", function(err, runner) {
-                        if (err)
-                            return console.log(err);
-
-                        rungui.lastRun = [runner, exec];
-                        commands.exec("runlast");
-                    });
-
-                }
-            }, plugin);
-
-        }
-
-        function gdb50OutputToCLI() {
-            //  tmux set-option detach-on-destroy off
-            //  tmux switch-client -t SESSION
-            //  tmux set-option detach-on-destroy on
-            // to execute:
-            // c9 exec gdb50start; node ~/bin/c9gdbshim.js BIN; c9 exec gdb50stop
-            var runner = {
-                caption: "Shell50",
-                debugger: "gdb",
-                $debugDefaultState: true,
-                retryCount: 10,
-                retryInterval: 300,
-                script: ['echo "test"; while kill -0 $(pgrep -fn c9gdbshim.js); do sleep 1; done'],
                 socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
             };
-            run.addRunner("Shell50", runner, run);
 
-            var process = null;
+            // Accepts bins and passes directly to GDB shim;
+            // To be used by standard run system.
+            var debug50 = gdbRunner;
+            debug50.caption = "Debug50";
+            debug50.script = ['node /home/ubuntu/bin/c9gdbshim.js "$file" $args'];
+            run.addRunner("Debug50", debug50, run);
 
-            commands.addCommand({
-                name: "gdb50start",
-                hint: "running our debugger",
-                group: "General",
-                exec: function (args) {
+            // Monitors a shim started on the command line.
+            var shell50 = gdbRunner;
+            shell50.caption = "Shell50";
+            shell50.script = ['while kill -0 $(pgrep -fn c9gdbshim.js); do sleep 1; done'];
+            run.addRunner("Shell50", shell50, run);
+        }
 
-                    // fetch shell runner
-                    run.getRunner("Shell50", function(err, runner) {
+        /**
+         * Kick off a GDB runner via the standard run system
+         * (with a new process window) from the command line.
+         *
+         * @param {[string]} CWD, bin to execute, and cli args
+         */
+        function gdb50New(args) {
+            // args[0] is CWD, args[1..n] are args to c9 command
+            if (args.length < 2)
+                return showError("Please enter a filename to debug!");
+
+            // cwd is first arg, bin is second argument
+            var exec = util.escapeShell(Path.join(args[0], args[1]));
+
+            // concat any arg for executable
+            if (args.length > 2)
+                exec += " " + args.slice(2).join(" ");
+
+            // set runner and command as "last run", and execute it
+            run.getRunner("Debug50", function(err, runner) {
+                if (err)
+                    return showError("Cannot find correct runner!");
+
+                rungui.lastRun = [runner, exec];
+                commands.exec("runlast");
+            });
+        }
+
+        /**
+         * Helper function for gdb50Start to display errors.
+         */
+        function handleErr(proc, err) {
+            showError(proc, "error:", err);
+        }
+
+        /**
+         * Start a process that serves as a proxy for a GDB shim
+         * already running on the command line. The proxy simply
+         * monitors the shim process and is used by the debugger
+         * API to determine if the process is still running.
+         * Execute with:
+         * `c9 exec gdb50start; node ~/bin/c9gdbshim.js BIN ARGS`;
+         *  c9 exec gdb50stop`
+         */
+        function gdb50Start(args) {
+            // fetch shell runner
+            run.getRunner("Shell50", function(err, runner) {
+                if (err)
+                    return handleErr("Runner fetch", err);
+
+                // make sure debugger isn't already running
+                debug.checkAttached(function() {
+                    // start proxy process
+                    var procOpts = {
+                        cwd: args[0],
+                        args: [],
+                        debug: true,
+                    };
+                    process = run.run(runner, procOpts, function(err) {
                         if (err)
-                            return console.log(err);
+                            return handleErr("Proxy process run", err);
 
-                        // make sure debugger isn't already running
-                        debug.checkAttached(function() {
-
-                            // start process
-                            process = run.run(runner, {
-                                cwd: args[0],
-                                args: [],
-                                debug: true,
-                            }, function(err, pid) {
-                                // once running, debug
-                                console.log("RUNNING", err, pid, process);
-                                debug.debug(process, function(err) {
-                                    console.log("DEBUGGING", err);
-                                });
-                            });
-                            console.log(process);
+                        // once running, debug
+                        debug.debug(process, function(err) {
+                            if (err)
+                                return handleErr("Debug start", err);
                         });
                     });
-                }
+                });
+            });
+        }
+
+        /**
+         * gdb50Stop
+         * Stops and cleans a debug process started with gdb50Start.
+         */
+        function gdb50Stop() {
+            // must only run if a process is running
+            if (process === null)
+                return false;
+
+            console.log(debug.state);
+            debug && debug.stop();
+            process.stop(function() {
+                process = null;
+            });
+        }
+
+        function load() {
+            // don't allow users to see "Save Runner?" dialog
+            settings.set("user/output/nosavequestion", "true");
+
+            // install runners used by exec commands
+            createRunners();
+
+            // create commands that can be called from `c9 exec`
+            commands.addCommand({
+                name: "gdb50start",
+                hint: "Kickstart GDB debugger from CLI",
+                group: "Run & Debug",
+                exec: gdb50Start
             }, plugin);
 
             commands.addCommand({
                 name: "gdb50stop",
-                hint: "stopping our debugger",
-                group: "General",
-                exec: function () {
-                    console.log(process);
-                    debug && debug.stop();
-                    process && process.stop(function(err) {
-                        // process.emit("detach");
-                        // process.cleanup();
-                        err && console.log(err);
-                        console.log(process);
-                    });
+                hint: "Stop GDB debugger started from CLI",
+                group: "Run & Debug",
+                exec: gdb50Stop
+            }, plugin);
 
-                }
+            commands.addCommand({
+                name: "gdb50new",
+                hint: "Start a standard debug window from CLI",
+                group: "Run & Debug",
+                exec: gdb50New
             }, plugin);
         }
-
-        function load() {
-            gdb50ExecCommand();
-            gdb50OutputToCLI();
-        }
-
-        /***** Methods *****/
-
-
 
         /***** Lifecycle *****/
 
@@ -151,7 +177,7 @@ define(function(require, exports, module) {
             load();
         });
         plugin.on("unload", function() {
-
+            process = null;
         });
 
         /***** Register and define API *****/
