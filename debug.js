@@ -2,7 +2,7 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.error", "run", "run.gui"
+        "Plugin", "commands", "dialog.error", "run", "run.gui", "settings", "util"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -13,11 +13,16 @@ define(function(require, exports, module) {
         var run = imports.run;
         var rungui = imports["run.gui"];
         var showError = imports["dialog.error"].show;
+        var settings = imports.settings;
+        var util = imports.util;
+
+        var Path = require("path");
 
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
 
         function gdb50ExecCommand() {
+            settings.set("user/output/nosavequestion", "true");
             // dynamically add a runner that accepts bins and passes
             // directly to the GDB shim, reducing retries since
             // there's no compilation step
@@ -40,8 +45,8 @@ define(function(require, exports, module) {
                     if (args.length < 2)
                         return showError("Please enter a filename to debug!");
 
-                    // bin is second argument
-                    var exec = args[1];
+                    // cwd is first arg, bin is second argument
+                    var exec = util.escapeShell(Path.join(args[0], args[1]));
 
                     // concat any arg for executable
                     if (args.length > 2)
