@@ -68,12 +68,29 @@ define(function(require, exports, module) {
         }
 
         function gdb50OutputToCLI() {
+            //  tmux set-option detach-on-destroy off
+            //  tmux switch-client -t SESSION
+            //  tmux set-option detach-on-destroy on
             // to execute:
             // c9 exec gdb50start; node ~/bin/c9gdbshim.js BIN; c9 exec gdb50stop
+            var runner = {
+                caption: "Shell50",
+                debugger: "gdb",
+                $debugDefaultState: true,
+                retryCount: 10,
+                retryInterval: 300,
+                script: ['while kill -0 $args 2> /dev/null; do sleep 1; done'],
+                socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
+            };
+            run.addRunner("Shell50", runner, run);
+
+            var process = null;
+
             commands.addCommand({
                 name: "gdb50start",
                 hint: "running our debugger",
                 group: "General",
+<<<<<<< HEAD
                 exec: function () {
                     process = debug.run({
                         "debugger": "gdb"
@@ -86,6 +103,54 @@ define(function(require, exports, module) {
                     }, "__cs50outputgdbdummy", function(err) {
                         process.running = process.STARTED;
                         console.log(err);});
+=======
+                exec: function (args) {
+                    console.log(tabManager.focussedTab.document.getSession());
+
+                    if (args.length < 2)
+                        return showError("Please enter a PID to monitor");
+
+                    run.getRunner("Debug50", function(err, runner) {
+                        if (err)
+                            return console.log(err);
+
+                        process = debug.run(runner, {
+                            cwd: args[0],
+                            args: args[1],
+                            debug: true
+                        }, function(err, pid) {
+                            console.log("RUNNING", err, pid, process);
+                            debug.debug(process, function(err) {
+                                console.log("DEBUGGING", err);
+                            });
+                        });
+                        console.log(process);
+                    });
+                    // process = run.run(runner, {
+                    //     path: args[1],
+                    //     cwd: args[0],
+                    //     args: args.splice(2),
+                    //     debug: true
+                    // }, function(err, pid) {
+                    //     console.log("RUNNING", err, pid, process);
+                    //     debug.debug(process, function(err) {
+                    //         console.log("DEBUGGING", err);
+                    //     });
+                    // });
+
+                    // process = debug.run(runner, {
+                    //     path: args[2],
+                    //     cwd: args[0],
+                    //     env: {},
+                    //     args: args.splice(3),
+                    //     debug: true
+                    // },
+                    // args[1],
+                    // function(err) {
+                    //     process.running = process.STARTED;
+                    //     console.log(err);
+                    // });
+>>>>>>> experiment: start dummy process that watches debugger to trick process object into staying alive
                 }
             }, plugin);
 
@@ -96,7 +161,6 @@ define(function(require, exports, module) {
                 exec: function () {
                     console.log(process);
                     debug && debug.stop();
-                    process.cleanUp();
                     process && process.stop(function(err) {
                         // process.emit("detach");
                         // process.cleanup();
