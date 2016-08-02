@@ -43,7 +43,7 @@ define(function(require, exports, module) {
                         return showError("Please enter a filename to debug!");
 
                     // cwd is first arg, bin is second argument
-                    var exec = Path.join(args[0], args[1]);
+                    var exec = Path.join(args[0], args[1]).replace(/ /g, "\\ ");
 
                     // concat any arg for executable
                     if (args.length > 2)
