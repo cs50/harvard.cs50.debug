@@ -79,7 +79,7 @@ define(function(require, exports, module) {
                 $debugDefaultState: true,
                 retryCount: 10,
                 retryInterval: 300,
-                script: ['while kill -0 $args 2> /dev/null; do sleep 1; done'],
+                script: ['echo "test"; while kill -0 $(pgrep -fn c9gdbshim.js); do sleep 1; done'],
                 socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
             };
             run.addRunner("Shell50", runner, run);
@@ -90,67 +90,31 @@ define(function(require, exports, module) {
                 name: "gdb50start",
                 hint: "running our debugger",
                 group: "General",
-<<<<<<< HEAD
-                exec: function () {
-                    process = debug.run({
-                        "debugger": "gdb"
-                    }, {
-                        path: "",
-                        cwd: "",
-                        env: {},
-                        args: [],
-                        debug: true
-                    }, "__cs50outputgdbdummy", function(err) {
-                        process.running = process.STARTED;
-                        console.log(err);});
-=======
                 exec: function (args) {
-                    console.log(tabManager.focussedTab.document.getSession());
 
-                    if (args.length < 2)
-                        return showError("Please enter a PID to monitor");
-
-                    run.getRunner("Debug50", function(err, runner) {
+                    // fetch shell runner
+                    run.getRunner("Shell50", function(err, runner) {
                         if (err)
                             return console.log(err);
 
-                        process = debug.run(runner, {
-                            cwd: args[0],
-                            args: args[1],
-                            debug: true
-                        }, function(err, pid) {
-                            console.log("RUNNING", err, pid, process);
-                            debug.debug(process, function(err) {
-                                console.log("DEBUGGING", err);
-                            });
-                        });
-                        console.log(process);
-                    });
-                    // process = run.run(runner, {
-                    //     path: args[1],
-                    //     cwd: args[0],
-                    //     args: args.splice(2),
-                    //     debug: true
-                    // }, function(err, pid) {
-                    //     console.log("RUNNING", err, pid, process);
-                    //     debug.debug(process, function(err) {
-                    //         console.log("DEBUGGING", err);
-                    //     });
-                    // });
+                        // make sure debugger isn't already running
+                        debug.checkAttached(function() {
 
-                    // process = debug.run(runner, {
-                    //     path: args[2],
-                    //     cwd: args[0],
-                    //     env: {},
-                    //     args: args.splice(3),
-                    //     debug: true
-                    // },
-                    // args[1],
-                    // function(err) {
-                    //     process.running = process.STARTED;
-                    //     console.log(err);
-                    // });
->>>>>>> experiment: start dummy process that watches debugger to trick process object into staying alive
+                            // start process
+                            process = run.run(runner, {
+                                cwd: args[0],
+                                args: [],
+                                debug: true,
+                            }, function(err, pid) {
+                                // once running, debug
+                                console.log("RUNNING", err, pid, process);
+                                debug.debug(process, function(err) {
+                                    console.log("DEBUGGING", err);
+                                });
+                            });
+                            console.log(process);
+                        });
+                    });
                 }
             }, plugin);
 
