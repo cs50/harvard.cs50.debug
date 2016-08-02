@@ -30,27 +30,28 @@ define(function(require, exports, module) {
          * Dynamically add runners for the gdb50* processes.
          */
         function createRunners() {
-            // GDB runner defaults; reduce retries due to no compilation
-            var gdbRunner = {
+            // Accepts bins and passes directly to GDB shim;
+            // To be used by standard run system.
+            run.addRunner("Debug50", {
+                caption: "Debug50",
+                script: ['node /home/ubuntu/bin/c9gdbshim.js "$file" $args'],
                 debugger: "gdb",
                 $debugDefaultState: true,
                 retryCount: 100,
                 retryInterval: 300,
                 socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
-            };
-
-            // Accepts bins and passes directly to GDB shim;
-            // To be used by standard run system.
-            var debug50 = gdbRunner;
-            debug50.caption = "Debug50";
-            debug50.script = ['node /home/ubuntu/bin/c9gdbshim.js "$file" $args'];
-            run.addRunner("Debug50", debug50, run);
+            }, run);
 
             // Monitors a shim started on the command line.
-            var shell50 = gdbRunner;
-            shell50.caption = "Shell50";
-            shell50.script = ['while kill -0 $(pgrep -fn c9gdbshim.js); do sleep 1; done'];
-            run.addRunner("Shell50", shell50, run);
+            run.addRunner("Shell50", {
+                caption: "Shell50",
+                script: ['while kill -0 $(pgrep -fn c9gdbshim.js); do sleep 1; done'],
+                debugger: "gdb",
+                $debugDefaultState: true,
+                retryCount: 100,
+                retryInterval: 300,
+                socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
+            }, run);
         }
 
         /**
