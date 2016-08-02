@@ -38,7 +38,7 @@ define(function(require, exports, module) {
                 exec: function(args) {
                     // args[0] is CWD, args[1..n] are args to c9 command
                     if (args.length < 2)
-                        showError("Please enter a filename to debug!");
+                        return showError("Please enter a filename to debug!");
 
                     // bin is second argument
                     var exec = args[1];
