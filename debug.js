@@ -14,6 +14,8 @@ define(function(require, exports, module) {
         var rungui = imports["run.gui"];
         var showError = imports["dialog.error"].show;
 
+        var Path = require("path");
+
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
 
@@ -40,8 +42,8 @@ define(function(require, exports, module) {
                     if (args.length < 2)
                         return showError("Please enter a filename to debug!");
 
-                    // bin is second argument
-                    var exec = args[1];
+                    // cwd is first arg, bin is second argument
+                    var exec = Path.join(args[0], args[1]);
 
                     // concat any arg for executable
                     if (args.length > 2)
