@@ -30,7 +30,7 @@ to start a process. It is effectively equivalent to hitting the "Run"
 button at the top of a workspace, and preconfigured to always use the
 GDB GUI debugger. Using it is simple:
 
-```
+```bash
 $ c9 exec gdb50new BIN [ARGS]
 ```
 
@@ -39,7 +39,7 @@ to the binary at execution.
 
 You might also put this in an alias to make things easier:
 
-```
+```bash
 $ alias debug50new="c9 exec gdb50new"
 $ debug50new BIN [ARGS]
 ```
@@ -77,7 +77,7 @@ to clean up the tmux session and `process` and `debug` object state.
 
 To use this, simply create a shell script with the following contents:
 
-```
+```bash
 #!/bin/bash
 
 # check args
@@ -125,6 +125,6 @@ Paste the contents of that file into a file called `debug50` in
 your `$PATH`, and be sure to `chmod +x` it.
 
 Then you may get started with:
-```
+```bash
 debug50 BIN [ARGS]
 ```
