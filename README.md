@@ -80,6 +80,12 @@ To use this, simply create a shell script with the following contents:
 ```
 #!/bin/bash
 
+# check args
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 executable [arguments]"
+    exit 1
+fi
+
 # PID of current execution
 PID=$$
 
