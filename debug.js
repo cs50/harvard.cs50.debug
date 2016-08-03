@@ -140,7 +140,6 @@ define(function(require, exports, module) {
 
                 // make sure debugger isn't already running
                 debug.checkAttached(function() {
-                    console.log("ATTACHING", process.length);
                     // no cli process running
                     if (!debugging)
                         return startProxy(args[0], pid, runner);
