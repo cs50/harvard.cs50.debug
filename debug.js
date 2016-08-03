@@ -25,6 +25,9 @@ define(function(require, exports, module) {
         var process = [];
         var debugging = false;
         var subsequent = null;
+        var SETTING_PID="project/cs50/debug/@pid";
+        var SETTING_PROXY="project/cs50/debug/@proxy";
+        var SETTING_NAME="project/cs50/debug/@name";
 
         /***** Methods *****/
 
@@ -91,12 +94,16 @@ define(function(require, exports, module) {
             showError(proc, "error:", err);
         }
 
+        /**
+         * Helper function to start the runner and kick off debug
+         * process, saving state in event of reconnect.
+         */
         function startProxy(cwd, pid, runner) {
             // provide proxy process with pid to monitor
             var procOpts = {
                 cwd: cwd,
                 args: [pid.toString()],
-                debug: true,
+                debug: true
             };
 
             // start proxy process
@@ -108,15 +115,42 @@ define(function(require, exports, module) {
                 debug.debug(process[pid], function(err) {
                     if (err) {
                         handleErr("Debug start", err);
-                        process[pid].stop();
-                        delete process[pid];
+                        return cleanState(pid);
                     }
 
                     // successfully opened debugger
                     debugging = true;
+
+                    // store pid state for later use
+                    settings.set(SETTING_PID, pid);
+                    settings.set(SETTING_PROXY, process[pid].pid);
+                    settings.set(SETTING_NAME, process[pid].name);
                 });
             });
         }
+
+        /**
+         * Helper function to clean process and debugger state.
+         */
+        function cleanState(pid) {
+            if (debugging)
+                debug.stop();
+
+            if (pid)
+                delete process[pid];
+
+            debugging = false;
+
+            settings.set(SETTING_PID, null);
+            settings.set(SETTING_NAME, null);
+            settings.set(SETTING_PROXY, null);
+
+            if (subsequent) {
+                subsequent();
+                subsequent = null;
+            }
+        }
+
 
         /**
          * Start a process that serves as a proxy for a GDB shim
@@ -127,7 +161,7 @@ define(function(require, exports, module) {
          * `c9 exec gdb50start; node ~/bin/c9gdbshim.js BIN ARGS`;
          *  c9 exec gdb50stop`
          */
-        function gdb50Start(args) {
+        function gdb50Start(args, reconnect) {
             if (args.length != 2) {
                 showError("Error: expected process PID!");
                 return false;
@@ -163,6 +197,10 @@ define(function(require, exports, module) {
                 return false;
             }
 
+            // close debugger right away (waiting for proc to stop takes time)
+            if (debugging)
+                debug.stop();
+
             // process pid passed by argument
             var pid = args[1];
 
@@ -170,14 +208,43 @@ define(function(require, exports, module) {
             if (process[pid] === undefined)
                 return false;
 
-            debug.stop();
-            process[pid].stop(function() {
-                delete process[pid];
-                debugging = false;
-                if (subsequent) {
-                    subsequent();
-                    subsequent = null;
-                }
+            // stop PID and clean up
+            process[pid].stop(cleanState.bind(this, pid));
+        }
+
+        /**
+         * Check to see if we've saved a running process in the past.
+         * Try to restore it and re-connect the debugger to it, if it
+         * exists.
+         */
+        function restoreProcess() {
+            var proxy = settings.getNumber(SETTING_PROXY);
+            var pid = settings.getNumber(SETTING_PID);
+            var name = settings.get(SETTING_NAME);
+
+            if (!proxy || !pid || !name)
+                return;
+
+            // to rebuild process we need the runner
+            run.getRunner("Shell50", function(err, runner) {
+                if (err)
+                    return cleanState(pid);
+
+                // recover process from saved state
+                process[pid] = run.restoreProcess({
+                    pid: proxy,
+                    name: name,
+                    runner: [runner],
+                    running: run.STARTED
+                });
+
+                // reconnect the debugger
+                debug.debug(process[pid], true, function (err) {
+                    if (err)
+                        return cleanState(pid);
+
+                    debugging = true;
+                });
             });
         }
 
@@ -209,6 +276,9 @@ define(function(require, exports, module) {
                 group: "Run & Debug",
                 exec: gdb50New
             }, plugin);
+
+            // try to restore state if a running process
+            restoreProcess();
         }
 
         /***** Lifecycle *****/
