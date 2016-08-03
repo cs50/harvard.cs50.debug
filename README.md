@@ -46,26 +46,32 @@ $ debug50new BIN [ARGS]
 
 ### `gdb50{start,end}`
 
-The `gdb50start` and `gdb50end` commands try to be clever.
+The `gdb50start` and `gdb50end` commands try to allow the user to
+execute their binary directly in a terminal window, but still connect
+the GUI debugger to the running process without opening a new console window.
+
 They use the existing run and debug system where possible, but provide an
 extraneous process to satisfy their requirements.
-In particular, the Run system expects a command to be executed, creates
-a new `tmux` session for it, and generally opens a new console window
-showing that `tmux` session.
-These commands provide a command to execute in a `tmux` session, but do
-not show the session.
+In particular, `run.gui` normally expects a command to be executed, creates
+a new `tmux` session for it, and opens a new console window showing that
+`tmux` session with a lot of chrome describing the `runner` used to begin
+the process.
+However, `run.run` allows us to run a command in a new `tmux` session and
+expects us to display it to the user.
+We simply chose not to display it, since the output of the executable is
+already being shown in the user's terminal.
 
 The run system monitors this session for consistent state, so we get
 around the issue by providing a process that effectively acts as a proxy
 for the process we're running in the existing terminal.
 This "proxy" simply monitors the PID of the GDB shim, and destroys itself
 within ~1 second of when the shim quits.
-The internal state of the `Process` object (and therefore the `Run` and
-`Debug` objectds) can then stay consistent.
+The internal state of the `process` object (and therefore the `run` and
+`debug` objects) can then stay consistent.
 
 Process management is therefore required for this to work.
 We create a process in the shell, provide the PID of that process to
-`gdb50start`, which creates the "proxy" process to monitor it.
+`gdb50start`, which then creates the "proxy" process to monitor it.
 Once debugging is complete, `gdb50exit` is provided the same PID
 to clean up the tmux session and `process` and `debug` object state.
 
@@ -104,3 +110,8 @@ echo
 
 Paste the contents of that file into a file called `debug50` in
 your `$PATH`, and be sure to `chmod +x` it.
+
+Then you may get started with:
+```
+debug50 BIN [ARGS]
+```
