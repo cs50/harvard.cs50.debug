@@ -37,12 +37,14 @@ $ c9 exec gdb50new BIN [ARGS]
 Where `BIN` is the binary name and `ARGS` are one or more arguments applied
 to the binary at execution.
 
-You might also put this in an alias to make things easier:
+Although you could put this into an alias, we also write a script
+called `debug50` into `~/bin` that can begin the runner this way:
 
 ```bash
-$ alias debug50new="c9 exec gdb50new"
-$ debug50new BIN [ARGS]
+$ debug50 --open BIN [ARGS]
 ```
+
+The `debug50` command will accept either `-o` or `--open`.
 
 ### `gdb50{start,end}`
 
@@ -75,56 +77,12 @@ We create a process in the shell, provide the PID of that process to
 Once debugging is complete, `gdb50exit` is provided the same PID
 to clean up the tmux session and `process` and `debug` object state.
 
-To use this, simply create a shell script with the following contents:
+To use this, simply call `debug50`, which is installed in `~/bin` (and
+should be in the `$PATH` by default):
 
 ```bash
-#!/bin/bash
-
-# check args
-if [ $# -lt 1 ]; then
-    echo "Usage: $0 [-o|--open] executable [arguments]"
-    exit 1
-fi
-
-# set c9 bin path for online/offline
-if [ ${IDE_OFFLINE+x} ]; then
-    C9="/var/c9sdk/bin/c9"
-else
-    C9="/mnt/shared/sbin/c9"
-fi
-
-# if open is requested, use existing run system and open new proc window
-if [ "$1" = "--open" -o "$1" = "-o" ]; then
-     $C9 exec gdb50new ${@:2}
-     exit 0
-fi
-
-# PID of current execution
-PID=$$
-
-# give PID to proxy for monitoring
-ERR="$($C9 exec gdb50start $PID)"
-
-# c9 exec doesn't return non-zero on error!
-if [ "$ERR" = "Could not execute gdb50start" ]; then
-    echo "Unable to start!"
-    exit 1
-fi
-
-# execute the shim which starts gdb and executable, and waits for GUI debugger
-node /home/ubuntu/bin/c9gdbshim.js $@
-
-# cleanup
-$C9 exec gdb50stop $PID
-
-# spit out a final newline
-echo
+$ debug50 BIN [ARGS]
 ```
 
-Paste the contents of that file into a file called `debug50` in
-your `$PATH`, and be sure to `chmod +x` it.
-
-Then you may get started with:
-```bash
-debug50 BIN [ARGS]
-```
+Compare the separate code paths in the `debug50` script in this repo
+to see how it begins `gdb50new` vs `gdb50start` and `gdb50stop`.

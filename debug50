@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# check args
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 [-o|--open] executable [arguments]"
+    exit 1
+fi
+
+# set c9 bin path for online/offline
+if [ ${IDE_OFFLINE+x} ]; then
+    C9="/var/c9sdk/bin/c9"
+else
+    C9="/mnt/shared/sbin/c9"
+fi
+
+# if open is requested, use existing run system and open new proc window
+if [ "$1" = "--open" -o "$1" = "-o" ]; then
+     $C9 exec gdb50new ${@:2}
+     exit 0
+fi
+
+# PID of current execution
+PID=$$
+
+# give PID to proxy for monitoring
+ERR="$($C9 exec gdb50start $PID)"
+
+# c9 exec doesn't return non-zero on error!
+if [ "$ERR" = "Could not execute gdb50start" ]; then
+    echo "Unable to start!"
+    exit 1
+fi
+
+# execute the shim which starts gdb and executable, and waits for GUI debugger
+node /home/ubuntu/bin/c9gdbshim.js $@
+
+# cleanup
+$C9 exec gdb50stop $PID
+
+# spit out a final newline
+echo
