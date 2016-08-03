@@ -83,6 +83,13 @@ To use this, simply create a shell script with the following contents:
 # PID of current execution
 PID=$$
 
+# set c9 bin path for online/offline
+if [ ${IDE_OFFLINE+x} ]; then
+    C9="/var/c9sdk/bin/c9"
+else
+    C9="/mnt/shared/sbin/c9"
+fi
+
 # give PID to proxy for monitoring
 ERR="$(/var/c9sdk/bin/c9 exec gdb50start $PID)"
 
