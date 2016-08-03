@@ -2,8 +2,8 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.error", "debugger", "run", "run.gui",
-        "settings", "util"
+        "Plugin", "commands", "dialog.error", "debugger", "fs", "run",
+        "run.gui", "settings", "util"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -12,6 +12,7 @@ define(function(require, exports, module) {
         var Plugin = imports.Plugin;
         var commands = imports.commands;
         var debug = imports.debugger;
+        var fs = imports.fs;
         var run = imports.run;
         var rungui = imports["run.gui"];
         var showError = imports["dialog.error"].show;
@@ -36,6 +37,12 @@ define(function(require, exports, module) {
 
         // name of the (hidden) proxy process
         var SETTING_NAME="project/cs50/debug/@name";
+
+        // path of debug50 script revision number
+        var SETTING_VER="project/cs50/debug/@ver";
+
+        // version of debug50 file
+        var DEBUG_VER=1;
 
         /***** Methods *****/
 
@@ -291,6 +298,21 @@ define(function(require, exports, module) {
                 group: "Run & Debug",
                 exec: gdb50New
             }, plugin);
+
+            // write most recent debug50 script
+            var ver = settings.getNumber(SETTING_VER);
+
+            if (isNaN(ver) || ver < DEBUG_VER) {
+                var content = require("text!./bin/debug50");
+                fs.writeFile("~/bin/debug50", content, function(err){
+                    if (err) return console.error(err);
+
+                    fs.chmod("~/bin/debug50", 755, function(err){
+                        if (err) return console.error(err);
+                        settings.set(SETTING_VER, DEBUG_VER);
+                    });
+                });
+            }
 
             // try to restore state if a running process
             restoreProcess();
