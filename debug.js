@@ -24,9 +24,17 @@ define(function(require, exports, module) {
         var plugin = new Plugin("Ajax.org", main.consumes);
         var process = [];
         var debugging = false;
+
+        // delay execution of next debugging process if old is killed
         var subsequent = null;
+
+        // PID of the shim
         var SETTING_PID="project/cs50/debug/@pid";
+
+        // PID of the (hidden) proxy process that monitors shim
         var SETTING_PROXY="project/cs50/debug/@proxy";
+
+        // name of the (hidden) proxy process
         var SETTING_NAME="project/cs50/debug/@name";
 
         /***** Methods *****/
@@ -95,6 +103,32 @@ define(function(require, exports, module) {
         }
 
         /**
+         * Given a process object, ask the debugger to start debugging
+         * it, and reconnecting the debugger to an existing running
+         * procerss if necessary.
+         */
+        function startDebugging(pid, reconnect) {
+            if (reconnect == undefined)
+                reconnect = false;
+
+            // kick off debugger
+            debug.debug(process[pid], reconnect, function(err) {
+                if (err) {
+                    handleErr("Debug start", err);
+                    return cleanState(pid);
+                }
+
+                // successfully opened debugger
+                debugging = true;
+
+                // store pid state for later use
+                settings.set(SETTING_PID, pid);
+                settings.set(SETTING_PROXY, process[pid].pid);
+                settings.set(SETTING_NAME, process[pid].name);
+            });
+        }
+
+        /**
          * Helper function to start the runner and kick off debug
          * process, saving state in event of reconnect.
          */
@@ -106,26 +140,12 @@ define(function(require, exports, module) {
                 debug: true
             };
 
-            // start proxy process
+            // start proxy process and begin debugging if successful
             process[pid] = run.run(runner, procOpts, function(err) {
                 if (err)
                     return handleErr("Proxy process run", err);
 
-                // once running, debug
-                debug.debug(process[pid], function(err) {
-                    if (err) {
-                        handleErr("Debug start", err);
-                        return cleanState(pid);
-                    }
-
-                    // successfully opened debugger
-                    debugging = true;
-
-                    // store pid state for later use
-                    settings.set(SETTING_PID, pid);
-                    settings.set(SETTING_PROXY, process[pid].pid);
-                    settings.set(SETTING_NAME, process[pid].name);
-                });
+                startDebugging(pid);
             });
         }
 
@@ -239,12 +259,7 @@ define(function(require, exports, module) {
                 });
 
                 // reconnect the debugger
-                debug.debug(process[pid], true, function (err) {
-                    if (err)
-                        return cleanState(pid);
-
-                    debugging = true;
-                });
+                startDebugging(pid, true);
             });
         }
 
