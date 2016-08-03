@@ -91,7 +91,7 @@ else
 fi
 
 # give PID to proxy for monitoring
-ERR="$(/var/c9sdk/bin/c9 exec gdb50start $PID)"
+ERR="$($C9 exec gdb50start $PID)"
 
 # c9 exec doesn't return non-zero on error!
 if [ "$ERR" = "Could not execute gdb50start" ]; then
@@ -103,7 +103,7 @@ fi
 node /home/ubuntu/bin/c9gdbshim.js $@
 
 # cleanup
-/var/c9sdk/bin/c9 exec gdb50stop $PID
+$C9 exec gdb50stop $PID
 
 # spit out a final newline
 echo
