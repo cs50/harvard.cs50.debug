@@ -2,8 +2,8 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.error", "debugger", "fs", "run",
-        "run.gui", "settings", "util"
+        "Plugin", "commands", "dialog.error", "debugger", "fs", "proc",
+        "run", "run.gui", "settings", "util"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -13,6 +13,7 @@ define(function(require, exports, module) {
         var commands = imports.commands;
         var debug = imports.debugger;
         var fs = imports.fs;
+        var proc = imports.proc;
         var run = imports.run;
         var rungui = imports["run.gui"];
         var showError = imports["dialog.error"].show;
@@ -42,7 +43,7 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=1;
+        var DEBUG_VER=2;
 
         /***** Methods *****/
 
@@ -140,6 +141,9 @@ define(function(require, exports, module) {
          * process, saving state in event of reconnect.
          */
         function startProxy(cwd, pid, runner) {
+            // start shim by sending debug50 the SIGUSR1 signal
+            proc.spawn("kill", { args: ["-SIGUSR1", pid] }, function() {});
+
             // provide proxy process with pid to monitor
             var procOpts = {
                 cwd: cwd,
@@ -210,6 +214,9 @@ define(function(require, exports, module) {
 
                     // wait to startProxy until old has stopped
                     subsequent = startProxy.bind(this, args[0], pid, runner);
+                }, function() {
+                    // user cancelled, abort the debug50 call
+                    proc.spawn("kill", { args: [pid] }, function() {});
                 });
             });
         }
