@@ -12,10 +12,11 @@ if [ ${IDE_OFFLINE+x} ]; then
 else
     C9="/mnt/shared/sbin/c9"
 fi
+C9="$C9 exec"
 
 # if open is requested, use existing run system and open new proc window
 if [ "$1" = "--open" -o "$1" = "-o" ]; then
-     $C9 exec gdb50new ${@:2}
+     $C9 gdb50new ${@:2}
      exit 0
 fi
 
@@ -23,10 +24,10 @@ fi
 PID=$$
 
 # SIGUSR1 signals to begin the shim
-trap "node /home/ubuntu/bin/c9gdbshim.js $@; $C9 exec gdb50stop $PID; echo; exit 0" SIGUSR1
+trap "node /home/ubuntu/bin/c9gdbshim.js $@; $C9 gdb50stop $PID; echo; exit 0" SIGUSR1
 
 # give PID to proxy for monitoring
-ERR="$($C9 exec gdb50start $PID)"
+ERR="$($C9 gdb50start $PID)"
 
 # c9 exec doesn't return non-zero on error!
 if [ "$ERR" = "Could not execute gdb50start" ]; then
