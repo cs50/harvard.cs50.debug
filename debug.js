@@ -92,12 +92,14 @@ define(function(require, exports, module) {
         }
 
         function startProxy(cwd, pid, runner) {
-            // start proxy process
+            // provide proxy process with pid to monitor
             var procOpts = {
                 cwd: cwd,
                 args: [pid.toString()],
                 debug: true,
             };
+
+            // start proxy process
             process[pid] = run.run(runner, procOpts, function(err) {
                 if (err)
                     return handleErr("Proxy process run", err);
@@ -110,6 +112,7 @@ define(function(require, exports, module) {
                         delete process[pid];
                     }
 
+                    // successfully opened debugger
                     debugging = true;
                 });
             });
