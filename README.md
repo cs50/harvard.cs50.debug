@@ -80,12 +80,6 @@ To use this, simply create a shell script with the following contents:
 ```
 #!/bin/bash
 
-# check for running shims already
-#if pgrep -f c9gdbshim.js &>/dev/null ; then
-#    echo "You are already running $0! Please quit it and try again."
-#    exit 1
-#fi
-
 # PID of current execution
 PID=$$
 
