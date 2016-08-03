@@ -82,12 +82,9 @@ To use this, simply create a shell script with the following contents:
 
 # check args
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 executable [arguments]"
+    echo "Usage: $0 [-o|--open] executable [arguments]"
     exit 1
 fi
-
-# PID of current execution
-PID=$$
 
 # set c9 bin path for online/offline
 if [ ${IDE_OFFLINE+x} ]; then
@@ -95,6 +92,15 @@ if [ ${IDE_OFFLINE+x} ]; then
 else
     C9="/mnt/shared/sbin/c9"
 fi
+
+# if open is requested, use existing run system and open new proc window
+if [ "$1" = "--open" -o "$1" = "-o" ]; then
+     $C9 exec gdb50new ${@:2}
+     exit 0
+fi
+
+# PID of current execution
+PID=$$
 
 # give PID to proxy for monitoring
 ERR="$($C9 exec gdb50start $PID)"
