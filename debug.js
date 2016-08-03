@@ -23,7 +23,7 @@ define(function(require, exports, module) {
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
         var process = [];
-        var debugging = true;
+        var debugging = false;
         var subsequent = null;
 
         /***** Methods *****/
