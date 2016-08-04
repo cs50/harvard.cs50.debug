@@ -75,8 +75,14 @@ The internal state of the `process` object (and therefore the `run` and
 Process management is therefore required for this to work.
 We create a process in the shell, provide the PID of that process to
 `gdb50start`, which then creates the "proxy" process to monitor it.
-Once debugging is complete, `gdb50exit` is provided the same PID
-to clean up the tmux session and `process` and `debug` object state.
+If everything checks out, the plugin sends `debug50` a `SIGUSR1` signal,
+which then uses that to start the shim process.
+This signal prevents starting the shim prematurely; for example, if
+the user selects when asked that they do not wish to stop an existing
+debug process.
+If the shim is begun, `gdb50exit` is called after debugging is complete,
+and provided the same PID, to clean up the tmux session and `process`
+and `debug` object state.
 
 To use this, simply call `debug50`, which is installed in `~/bin` (and
 should be in the `$PATH` by default):
