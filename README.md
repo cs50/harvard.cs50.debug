@@ -4,10 +4,11 @@
 
 This plugin will not function properly without the below.
 
-Apply the following 3 PRs to your existing installation of `c9.ide.run.debug`:
+Apply the following 4 PRs to your existing installation of `c9.ide.run.debug`:
 [38](https://github.com/c9/c9.ide.run.debug/pull/38),
 [39](https://github.com/c9/c9.ide.run.debug/pull/39),
-[40](https://github.com/c9/c9.ide.run.debug/pull/40)
+[40](https://github.com/c9/c9.ide.run.debug/pull/40), and
+[41](https://github.com/c9/c9.ide.run.debug/pull/41)
 
 And apply the following PR to your existing installation of `c9.ide.run`:
 [16](https://github.com/c9/c9.ide.run/pull/16)

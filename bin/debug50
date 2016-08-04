@@ -24,7 +24,8 @@ fi
 PID=$$
 
 # SIGUSR1 signals to begin the shim
-trap "node /home/ubuntu/bin/c9gdbshim.js $@; $C9 gdb50stop $PID; echo; exit 0" SIGUSR1
+SHIM="/home/ubuntu/bin/c9gdbshim.js"
+trap "node $SHIM $@; $C9 gdb50stop $PID; echo; exit 0" SIGUSR1
 
 # give PID to proxy for monitoring
 ERR="$($C9 gdb50start $PID)"
@@ -35,5 +36,6 @@ if [ "$ERR" = "Could not execute gdb50start" ]; then
     exit 1
 fi
 
-# wait for user to start or quit this process
-while true; do sleep 1; done
+# wait 5 minutes to start or quit this process
+DELAY=300
+while [ $DELAY -gt 0 ]; do sleep 1; DELAY=$((DELAY-1)); done
