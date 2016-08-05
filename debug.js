@@ -98,8 +98,11 @@ define(function(require, exports, module) {
                 if (err)
                     return showError("Cannot find correct runner!");
 
-                rungui.lastRun = [runner, exec];
-                commands.exec("runlast");
+                // make sure debugger isn't already running
+                debug.checkAttached(function() {
+                    rungui.lastRun = [runner, exec];
+                    commands.exec("runlast");
+                });
             });
         }
 
