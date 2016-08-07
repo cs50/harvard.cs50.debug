@@ -304,10 +304,8 @@ define(function(require, exports, module) {
             var tbName = editor.getElement("tbName");
             tbName.setAttribute("visible", false);
 
-            // rename "Command:" to "argv"
-            var commandLabel = tbName.nextSibling.nextSibling;
-            commandLabel.$ext.innerHTML = "argv";
-            commandLabel.$ext.classList.add("argv-label");
+            // remove "Command:" label
+            tbName.nextSibling.nextSibling.setAttribute("visible", false);
 
             // hide debug button
             editor.getElement("btnDebug").$ext.style.visibility = "hidden";
