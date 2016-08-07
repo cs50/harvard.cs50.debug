@@ -1,0 +1,17 @@
+.debug50 .argv {
+    background-color: #e0e5e7 !important;
+}
+.debug50 .argv:hover, .debug50 .argv:focus {
+    box-shadow: 0px 0px 1px #8a99a9;
+}
+.debug50 .argv.dark {
+    background-color: #003a58 !important;
+    color: #cccccc !important;
+}
+.debug50 .argv-label {
+    min-width: auto !important;
+}
+.debug50 .argv, .debug50 .argv-label {
+    font-family: monospace !important;
+}
+

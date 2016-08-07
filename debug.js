@@ -2,8 +2,9 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.error", "debugger", "fs", "proc",
-        "run", "run.gui", "settings", "util"
+        "Plugin", "commands", "dialog.error", "debugger", "editors", "fs",
+        "gdbdebugger", "proc", "run", "run.gui", "settings", "tabManager", "ui",
+        "util"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -12,12 +13,16 @@ define(function(require, exports, module) {
         var Plugin = imports.Plugin;
         var commands = imports.commands;
         var debug = imports.debugger;
+        var editors = imports.editors;
         var fs = imports.fs;
+        var gdbdebugger = imports.gdbdebugger;
         var proc = imports.proc;
         var run = imports.run;
         var rungui = imports["run.gui"];
         var showError = imports["dialog.error"].show;
         var settings = imports.settings;
+        var tabManager = imports.tabManager;
+        var ui = imports.ui;
         var util = imports.util;
 
         var Path = require("path");
@@ -277,6 +282,119 @@ define(function(require, exports, module) {
             });
         }
 
+        /**
+         * Simplifies the interface of an "output" editor (terminal debugger).
+         *
+         * @param {Editor} editor an editor of type output
+         */
+        function simplifyGui(editor) {
+            if (!editor || editor.type !== "output")
+                return;
+
+            var toolbar = editor.aml.childNodes[1];
+            toolbar.$ext.classList.add("debug50");
+
+            // swap run and restart buttons
+            var btnRun = editor.getElement("btnRun");
+            var btnRestart = btnRun.nextSibling;
+            btnRestart.removeNode();
+            toolbar.insertBefore(btnRestart, btnRun);
+
+            // hide name input field
+            var tbName = editor.getElement("tbName");
+            tbName.setAttribute("visible", false);
+
+            // rename "Command:" to "argv"
+            var commandLabel = tbName.nextSibling.nextSibling;
+            commandLabel.$ext.innerHTML = "argv";
+            commandLabel.$ext.classList.add("argv-label");
+
+            // hide debug button
+            editor.getElement("btnDebug").$ext.style.visibility = "hidden";
+
+            // hide Runner button
+            editor.getElement("btnRunner").setAttribute("visible", false);
+
+            // hide CWD button
+            editor.getElement("btnCwd").setAttribute("visible", false);
+
+            // hide ENV button
+            editor.getElement("btnEnv").setAttribute("visible", false);
+        }
+
+        /**
+         * Should be called with an output editor when first created only.
+         * Simplifies gui and styles argv field of the editor initially, and
+         * sets up listeners to style argv on skin change, and disable while
+         * debugger is running.
+         *
+         * @param {object} e an object with a property, editor, that's an editor
+         * of type output.
+         */
+        function customizeDebugger(e) {
+            var editor = e.editor;
+
+            // ensure editor is "output"
+            if (!editor || editor.type !== "output")
+                return;
+
+            // simplify debugger gui initially
+            simplifyGui(editor);
+
+            /**
+             * Styles argv based on current skin.
+             *
+             * @param {string} [skin] the current skin
+             */
+            var styleArgv = (function () {
+                // whether skin is dark initially
+                var dark = settings.get("user/general/@skin").indexOf("dark") > -1;
+
+                // argv field
+                var tbCommand = editor.getElement("tbCommand");
+                return function (skin) {
+                    if (skin)
+                        // update dark
+                        dark = skin.indexOf("dark") > -1;
+
+                    // style argv field
+                    tbCommand.$ext.classList.add("argv");
+                    if (dark)
+                        tbCommand.$ext.classList.add("dark");
+                    else
+                        tbCommand.$ext.classList.remove("dark");
+                };
+            })();
+
+            // style argv input initially
+            styleArgv();
+
+            // style argv on skin change
+            settings.on("user/general/@skin", styleArgv);
+
+            /**
+             * Toggles argv's editability based on debugger state.
+             *
+             * @param {object} e an object with a property, state, representing
+             * the current state of gdbdebugger
+             */
+            var toggleArgvEdit = (function () {
+                var tbCommand = editor.getElement("tbCommand");
+                return function (e) {
+                    if (!e || typeof e.state === "undefined")
+                        return;
+
+                    tbCommand.setAttribute("disabled", e.state !== null);
+                };
+            })();
+
+            // toggle argv's editability initially
+            toggleArgvEdit({ state: gdbdebugger.state });
+
+            // disable argv when debugger runs only
+            gdbdebugger.on("stateChange", toggleArgvEdit);
+        }
+
         function load() {
             // don't allow users to see "Save Runner?" dialog
             settings.set("user/output/nosavequestion", "true");
@@ -323,6 +441,18 @@ define(function(require, exports, module) {
 
             // try to restore state if a running process
             restoreProcess();
+
+            // simplify "output" editors after reload
+            // handling "create" isn't enough as not handled on page reload
+            tabManager.getPanes().each(function(pane) {
+                pane.getEditors().each(function(editor) {
+                    customizeDebugger({editor:editor});
+                });
+            });
+
+            // simplify newly created "output" editors
+            editors.on("create", customizeDebugger);
+            ui.insertCss(require("text!./style.css"), options.staticPrefix, plugin);
         }
 
         /***** Lifecycle *****/
