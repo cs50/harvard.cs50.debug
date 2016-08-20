@@ -43,7 +43,7 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=2;
+        var DEBUG_VER=3;
 
         /***** Methods *****/
 
@@ -55,7 +55,7 @@ define(function(require, exports, module) {
             // To be used by standard run system.
             run.addRunner("Debug50", {
                 caption: "Debug50",
-                script: ['node /home/ubuntu/bin/c9gdbshim.js "$file" $args'],
+                script: ['node /home/ubuntu/.c9/bin/c9gdbshim.js "$file" $args'],
                 debugger: "gdb",
                 $debugDefaultState: true,
                 retryCount: 100,
@@ -192,7 +192,7 @@ define(function(require, exports, module) {
          * monitors the shim process and is used by the debugger
          * API to determine if the process is still running.
          * Execute with:
-         * `c9 exec gdb50start; node ~/bin/c9gdbshim.js BIN ARGS`;
+         * `c9 exec gdb50start; node ~/.c9/bin/c9gdbshim.js BIN ARGS`;
          *  c9 exec gdb50stop`
          */
         function gdb50Start(args, reconnect) {
