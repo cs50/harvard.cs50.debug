@@ -24,7 +24,7 @@ fi
 PID=$$
 
 # SIGUSR1 signals to begin the shim
-SHIM="/home/ubuntu/bin/c9gdbshim.js"
+SHIM="/home/ubuntu/.c9/bin/c9gdbshim.js"
 trap "node $SHIM $@; $C9 gdb50stop $PID; echo; exit 0" SIGUSR1
 
 # give PID to proxy for monitoring
