@@ -43,68 +43,9 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=4;
+        var DEBUG_VER=5;
 
         /***** Methods *****/
-
-        /**
-         * Dynamically add runners for the gdb50* processes.
-         */
-        function createRunners() {
-            // Accepts bins and passes directly to GDB shim;
-            // To be used by standard run system.
-            run.addRunner("Debug50", {
-                caption: "Debug50",
-                script: ['node /home/ubuntu/.c9/bin/c9gdbshim.js "$file" $args'],
-                debugger: "gdb",
-                $debugDefaultState: true,
-                retryCount: 100,
-                retryInterval: 300,
-                socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
-            }, run);
-
-            // Monitors a shim started on the command line.
-            run.addRunner("Shell50", {
-                caption: "Shell50",
-                script: ['while kill -0 $args ; do sleep 1; done'],
-                debugger: "gdb",
-                $debugDefaultState: true,
-                retryCount: 100,
-                retryInterval: 300,
-                socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
-            }, run);
-        }
-
-        /**
-         * Kick off a GDB runner via the standard run system
-         * (with a new process window) from the command line.
-         *
-         * @param {[string]} CWD, bin to execute, and cli args
-         */
-        function gdb50New(args) {
-            // args[0] is CWD, args[1..n] are args to c9 command
-            if (args.length < 2)
-                return showError("Please enter a filename to debug!");
-
-            // cwd is first arg, bin is second argument
-            var exec = util.escapeShell(Path.join(args[0], args[1]));
-
-            // concat any arg for executable
-            if (args.length > 2)
-                exec += " " + args.slice(2).join(" ");
-
-            // set runner and command as "last run", and execute it
-            run.getRunner("Debug50", function(err, runner) {
-                if (err)
-                    return showError("Cannot find correct runner!");
-
-                // make sure debugger isn't already running
-                debug.checkAttached(function() {
-                    rungui.lastRun = [runner, exec];
-                    commands.exec("runlast");
-                });
-            });
-        }
 
         /**
          * Helper function for gdb50Start to display errors.
@@ -284,8 +225,16 @@ define(function(require, exports, module) {
             // don't allow users to see "Save Runner?" dialog
             settings.set("user/output/nosavequestion", "true");
 
-            // install runners used by exec commands
-            createRunners();
+            // Monitors a shim started on the command line.
+            run.addRunner("Shell50", {
+                caption: "Shell50",
+                script: ['while kill -0 $args ; do sleep 1; done'],
+                debugger: "gdb",
+                $debugDefaultState: true,
+                retryCount: 100,
+                retryInterval: 300,
+                socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
+            }, run);
 
             // create commands that can be called from `c9 exec`
             commands.addCommand({
@@ -300,13 +249,6 @@ define(function(require, exports, module) {
                 hint: "Stop GDB debugger started from CLI",
                 group: "Run & Debug",
                 exec: gdb50Stop
-            }, plugin);
-
-            commands.addCommand({
-                name: "gdb50new",
-                hint: "Start a standard debug window from CLI",
-                group: "Run & Debug",
-                exec: gdb50New
             }, plugin);
 
             // write most recent debug50 script
