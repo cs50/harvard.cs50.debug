@@ -2,7 +2,7 @@
 
 # check args
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 [-o|--open] executable [arguments]"
+    echo "Usage: $0 executable [arguments]"
     exit 1
 fi
 
@@ -13,12 +13,6 @@ else
     C9="/mnt/shared/sbin/c9"
 fi
 C9="$C9 exec"
-
-# if open is requested, use existing run system and open new proc window
-if [ "$1" = "--open" -o "$1" = "-o" ]; then
-     $C9 gdb50new ${@:2}
-     exit 0
-fi
 
 # PID of current execution
 PID=$$
