@@ -2,14 +2,15 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.error", "debugger", "fs", "proc",
-        "run", "run.gui", "settings", "util"
+        "Plugin", "commands", "dialog.question", "dialog.error", "debugger",
+        "fs", "proc", "run", "run.gui", "settings", "util"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
 
     function main(options, imports, register) {
         var Plugin = imports.Plugin;
+        var askQuestion = imports["dialog.question"].show;
         var commands = imports.commands;
         var debug = imports.debugger;
         var fs = imports.fs;
@@ -43,7 +44,7 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=5;
+        var DEBUG_VER=6;
 
         /***** Methods *****/
 
@@ -249,6 +250,34 @@ define(function(require, exports, module) {
                 hint: "Stop GDB debugger started from CLI",
                 group: "Run & Debug",
                 exec: gdb50Stop
+            }, plugin);
+
+            commands.addCommand({
+                name: "gdb50forcestop",
+                hint: "Force-stop GDB debugger",
+                group: "Run & Debug",
+                exec: function() {
+                    askQuestion(
+                        "Stop debugging", "",
+                        "Are you sure you want to force-stop the debugger?",
+
+                        // Yes
+                        function() {
+                            process.forEach(function(r, pid) {
+                                 gdb50Stop([null, pid]);
+                            });
+                        },
+
+                        // No
+                        function() {},
+
+                        // hide "All" and "Cancel" buttons
+                        {
+                            all: false,
+                            cancel: false
+                        }
+                    );
+                }
             }, plugin);
 
             // write most recent debug50 script
