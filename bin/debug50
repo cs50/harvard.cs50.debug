@@ -14,6 +14,12 @@ else
 fi
 C9="$C9 exec"
 
+# allow force-stopping
+if [ "$1" = "-HUP" ]; then
+    $C9 gdb50forcestop
+    exit 0
+fi
+
 # PID of current execution
 PID=$$
 
