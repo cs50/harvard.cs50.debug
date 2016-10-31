@@ -3,7 +3,7 @@ define(function(require, exports, module) {
 
     main.consumes = [
         "Plugin", "commands", "dialog.question", "dialog.error", "debugger",
-        "fs", "proc", "run", "run.gui", "settings", "util"
+        "fs", "proc", "run", "run.gui", "settings", "util", "watcher"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -20,8 +20,9 @@ define(function(require, exports, module) {
         var showError = imports["dialog.error"].show;
         var settings = imports.settings;
         var util = imports.util;
+        var watcher = imports.watcher;
 
-        var Path = require("path");
+        var _ = require("lodash");
 
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
@@ -222,6 +223,61 @@ define(function(require, exports, module) {
             });
         }
 
+        /**
+         * Callback to be called after writing debug50
+         *
+         * @callback cb
+         * @param err an error in case of failure
+         * @param path debug50's path
+         */
+
+        /**
+         * Writes and updates debug50 script when should
+         *
+         * @param [cb] a callback to call after debug50's been written
+         */
+        function writeDebug50(cb) {
+            // debug50's path on the system
+            var path = "~/bin/debug50";
+
+            // ensure debug50 doesn't exist
+            fs.exists(path, function(exists) {
+                // fetch the currently set version
+                var ver = settings.getNumber(SETTING_VER);
+
+                // write debug50 when should
+                if (!exists || isNaN(ver) || ver < DEBUG_VER) {
+                    // retrive debug50's contents
+                    var content = require("text!./bin/debug50");
+
+                    // write debug50
+                    fs.writeFile(path, content, function(err){
+                        if (err) {
+                            console.error(err);
+                            return _.isFunction(cb) && cb(err);
+                        }
+
+                        // chmod debug50
+                        fs.chmod(path, 755, function(err){
+                            if (err) {
+                                console.error(err);
+                                return _.isFunction(cb) && cb(err);
+                            }
+
+                            // set or update version
+                            settings.set(SETTING_VER, DEBUG_VER);
+
+                            // call the callback, if given
+                            _.isFunction(cb) && cb(null, path);
+                        });
+                    });
+                }
+                else if (exists && _.isFunction(cb)) {
+                    cb(null, path);
+                }
+            });
+        }
+
         function load() {
             // don't allow users to see "Save Runner?" dialog
             settings.set("user/output/nosavequestion", "true");
@@ -280,20 +336,19 @@ define(function(require, exports, module) {
                 }
             }, plugin);
 
-            // write most recent debug50 script
-            var ver = settings.getNumber(SETTING_VER);
+            // write debug50 when should
+            writeDebug50(function watchDebug50(err, path) {
+                if (err) return;
 
-            if (isNaN(ver) || ver < DEBUG_VER) {
-                var content = require("text!./bin/debug50");
-                fs.writeFile("~/bin/debug50", content, function(err){
-                    if (err) return console.error(err);
+                // watch debug50
+                watcher.watch(path);
 
-                    fs.chmod("~/bin/debug50", 755, function(err){
-                        if (err) return console.error(err);
-                        settings.set(SETTING_VER, DEBUG_VER);
-                    });
+                // write debug50 when deleted
+                watcher.once("delete", function(e) {
+                    if (e.path === path)
+                        writeDebug50(watchDebug50);
                 });
-            }
+            });
 
             // try to restore state if a running process
             restoreProcess();
