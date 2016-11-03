@@ -6,6 +6,32 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
+function unsupport {
+    if [ $1 ]; then
+        echo "Afraid debug50 doesn't (yet!) support $1!"
+    else
+        echo "Afraid debug50 doesn't support this file type!"
+    fi
+    exit 1
+}
+
+# reject interpreted programs
+match=$(echo "$1" | grep -Eo "^(php|python|ruby)|\..+$")
+case $match in
+    .php|php)
+        unsupport PHP
+        ;;
+    .py|python)
+        unsupport Python
+        ;;
+    .rb|ruby)
+        unsupport Ruby
+        ;;
+    .*)
+        unsupport
+        ;;
+esac
+
 # set c9 bin path for online/offline
 if [ ${IDE_OFFLINE+x} ]; then
     C9="/var/c9sdk/bin/c9"

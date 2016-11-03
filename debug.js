@@ -45,7 +45,7 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=6;
+        var DEBUG_VER=7;
 
         /***** Methods *****/
 
