@@ -6,31 +6,13 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-function unsupport {
-    if [ $1 ]; then
-        echo "Afraid debug50 doesn't (yet!) support $1!"
-    else
-        echo "Afraid debug50 doesn't support this file type!"
-    fi
+# ensure file is executable and debuggable
+# http://stackoverflow.com/a/10319835/1797347
+# http://stackoverflow.com/a/12801855/1797347
+if ! [ $(file "$1" | grep -o executable) ] || ! [ "$(readelf -wL "$1")" ]; then
+    echo "Afraid debug50 doesn't support this file type!"
     exit 1
-}
-
-# reject interpreted programs
-match=$(echo "$1" | grep -Eo "^(php|python|ruby)|\..+$")
-case $match in
-    .php|php)
-        unsupport PHP
-        ;;
-    .py|python)
-        unsupport Python
-        ;;
-    .rb|ruby)
-        unsupport Ruby
-        ;;
-    .*)
-        unsupport
-        ;;
-esac
+fi
 
 # set c9 bin path for online/offline
 if [ ${IDE_OFFLINE+x} ]; then
