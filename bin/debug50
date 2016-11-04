@@ -9,8 +9,11 @@ fi
 # ensure file is executable and debuggable
 # http://stackoverflow.com/a/10319835/1797347
 # http://stackoverflow.com/a/12801855/1797347
-if ! [ $(file "$1" | grep -o executable) ] || ! [ "$(readelf -wL "$1")" ]; then
-    echo "Afraid debug50 doesn't support this file type!"
+if ! [ $(file "$1" | grep -o executable) ]; then
+    echo "Can't debug this program! Afraid debug50 only supports compiled C programs!"
+    exit 1
+elif ! [ "$(readelf -wL "$1")" ]; then
+    echo "Can't debug this program! Are you sure you compiled it with -ggdb?"
     exit 1
 fi
 
