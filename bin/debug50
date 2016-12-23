@@ -6,17 +6,6 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-# ensure file is executable and debuggable
-# http://stackoverflow.com/a/10319835/1797347
-# http://stackoverflow.com/a/12801855/1797347
-if ! [ $(file "$1" | grep -o executable) ]; then
-    echo "Can't debug this program! Afraid debug50 only supports compiled C programs!"
-    exit 1
-elif ! [ "$(readelf -wL "$1")" ]; then
-    echo "Can't debug this program! Are you sure you compiled it with -ggdb?"
-    exit 1
-fi
-
 # set c9 bin path for online/offline
 if [ ${IDE_OFFLINE+x} ]; then
     C9="/var/c9sdk/bin/c9"
@@ -29,6 +18,17 @@ C9="$C9 exec"
 if [ "$1" = "-HUP" ]; then
     $C9 gdb50forcestop
     exit 0
+fi
+
+# ensure file is executable and debuggable
+# http://stackoverflow.com/a/10319835/1797347
+# http://stackoverflow.com/a/12801855/1797347
+if ! [ $(file "$1" | grep -o executable) ]; then
+    echo "Can't debug this program! Afraid debug50 only supports compiled C programs!"
+    exit 1
+elif ! [ "$(readelf -wL "$1")" ]; then
+    echo "Can't debug this program! Are you sure you compiled it with -ggdb?"
+    exit 1
 fi
 
 # PID of current execution
