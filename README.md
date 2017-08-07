@@ -42,7 +42,7 @@ If the shim is begun, `gdb50stop` is called after debugging is complete, and
 provided the same PID, to clean up the tmux session and `process` and `debug`
 object state.
 
-To use this, simply call `debug50`, which is installed in `~/bin` (and should be
+To use this, simply call `debug50`, which is installed in `~/.cs50/bin` (and should be
 in the `$PATH` by default):
 
 ```bash

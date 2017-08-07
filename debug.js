@@ -238,7 +238,7 @@ define(function(require, exports, module) {
          */
         function writeDebug50(cb) {
             // debug50's path on the system
-            var path = "~/bin/debug50";
+            var path = "~/.cs50/bin/debug50";
 
             // ensure debug50 doesn't exist
             fs.exists(path, function(exists) {
