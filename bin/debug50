@@ -20,6 +20,11 @@ if [ "$1" = "-HUP" ]; then
     exit 0
 fi
 
+if ! [ -f "$1" ]; then
+    echo "debug50: $1: No such file"
+    exit 1
+fi
+
 # ensure file is executable and debuggable
 # http://stackoverflow.com/a/10319835/1797347
 # http://stackoverflow.com/a/12801855/1797347
