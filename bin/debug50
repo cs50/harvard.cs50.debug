@@ -21,7 +21,13 @@ if [ "$1" = "-HUP" ]; then
 fi
 
 if ! [ -f "$1" ]; then
-    echo "debug50: $1: No such file"
+    echo -n "debug50: $1: "
+    if [ -d "$1" ]; then
+        echo "Not a file"
+    else
+        echo "No such file"
+    fi
+
     exit 1
 fi
 
