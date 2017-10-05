@@ -54,7 +54,7 @@ sources=$(echo "$sources" | grep -Eo "/.*\.[ch],?")
 for f in ${sources//,/ }
 do
     if [ $f -nt "$1" ]; then
-        echo "Sources are more recent than executable. Be sure to recompile!"
+        echo "Looks like you've changed your code. Recompile and then re-run debug50!"
         exit 1
     fi
 done
