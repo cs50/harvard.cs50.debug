@@ -42,6 +42,23 @@ elif ! [ "$(readelf -wL "$1")" ]; then
     exit 1
 fi
 
+# get source and header files from gdb
+sources=$(gdb -q "$1" <<EOF
+info sources
+EOF
+)
+
+sources=$(echo "$sources" | grep -Eo "/.*\.[ch],?")
+
+# ensure executable is more recent than source and header files
+for f in ${sources//,/ }
+do
+    if [ $f -nt "$1" ]; then
+        echo "Sources are more recent than executable. Be sure to recompile!"
+        exit 1
+    fi
+done
+
 # PID of current execution
 PID=$$
 
