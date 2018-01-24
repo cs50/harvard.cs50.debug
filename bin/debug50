@@ -51,13 +51,26 @@ EOF
 sources=$(echo "$sources" | grep -Eo "/.*\.[ch],?")
 
 # ensure executable is more recent than source and header files
+breakpoint=false
 for f in ${sources//,/ }
 do
     if [ $f -nt "$1" ]; then
         echo "Looks like you've changed your code. Recompile and then re-run debug50!"
         exit 1
     fi
+
+    # check if any breakpoints are set in current source file
+    if [ $breakpoint = false ]; then
+        if [ -z "$($C9 breakpoint_set $f)" ]; then
+            breakpoint=true
+        fi
+    fi
 done
+
+if [ $breakpoint = false ]; then
+    echo "Looks like you haven't set any breakpoints. Set at least one breakpoint by clicking to the left of a line number and then re-run debug50!"
+    exit 1
+fi
 
 # PID of current execution
 PID=$$

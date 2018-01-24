@@ -2,8 +2,9 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "commands", "dialog.question", "dialog.error", "debugger",
-        "fs", "proc", "run", "run.gui", "settings", "util", "watcher"
+        "Plugin", "breakpoints", "c9", "commands", "dialog.question",
+        "dialog.error", "debugger", "fs", "proc", "run", "run.gui", "settings",
+        "util", "watcher"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -11,6 +12,8 @@ define(function(require, exports, module) {
     function main(options, imports, register) {
         var Plugin = imports.Plugin;
         var askQuestion = imports["dialog.question"].show;
+        var breakpoints = imports.breakpoints;
+        var c9 = imports.c9;
         var commands = imports.commands;
         var debug = imports.debugger;
         var fs = imports.fs;
@@ -20,7 +23,6 @@ define(function(require, exports, module) {
         var showError = imports["dialog.error"].show;
         var settings = imports.settings;
         var util = imports.util;
-        var watcher = imports.watcher;
 
         var _ = require("lodash");
 
@@ -45,7 +47,7 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=10;
+        var DEBUG_VER=11;
 
         /***** Methods *****/
 
@@ -336,19 +338,24 @@ define(function(require, exports, module) {
                 }
             }, plugin);
 
-            // write debug50 when should
-            writeDebug50(function watchDebug50(err, path) {
-                if (err) return;
+            commands.addCommand({
+                name: "breakpoint_set",
+                hint: "Check if source file has at least a breakpoint",
+                group: "Run & Debug",
+                exec: function(args) {
+                    if (args.length !== 2)
+                        return false;
 
-                // watch debug50
-                watcher.watch(path);
+                    // check if at least one breakpoint is set in the source file provided
+                    return breakpoints.breakpoints.some(function(breakpoint) {
 
-                // write debug50 when deleted
-                watcher.once("delete", function(e) {
-                    if (e.path === path)
-                        writeDebug50(watchDebug50);
-                });
-            });
+                        // slash at the beginning means ~/workspace/
+                        return breakpoint.path.replace(/^\//, c9.workspaceDir + "/").replace(/^~/, c9.home) == args[1];
+                    });
+                }
+            }, plugin);
+
+            writeDebug50();
 
             // try to restore state if a running process
             restoreProcess();
