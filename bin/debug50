@@ -12,11 +12,10 @@ if [ ${IDE_OFFLINE+x} ]; then
 else
     C9="/mnt/shared/sbin/c9"
 fi
-C9="$C9 exec"
 
 # allow force-stopping
 if [ "$1" = "-HUP" ]; then
-    $C9 gdb50forcestop
+    $C9 exec gdb50forcestop
     exit 0
 fi
 
@@ -48,26 +47,27 @@ info sources
 EOF
 )
 
-sources=$(echo "$sources" | grep -Eo "/.*\.[ch],?")
+sources=$(echo "$sources" | grep -Eo "/.*\.c,?")
 
 # ensure executable is more recent than source and header files
 breakpoint=false
+IFS=$'\n'
 for f in ${sources//,/ }
 do
-    if [ $f -nt "$1" ]; then
+    if [ "$f" -nt "$1" ]; then
         echo "Looks like you've changed your code. Recompile and then re-run debug50!"
         exit 1
     fi
 
     # check if any breakpoints are set in current source file
-    if [ $breakpoint = false ]; then
-        if [ -z "$($C9 breakpoint_set $f)" ]; then
+    if [ "$breakpoint" = false ]; then
+        if [ -z "$($C9 exec  breakpoint_set "$f")" ]; then
             breakpoint=true
         fi
     fi
 done
 
-if [ $breakpoint = false ]; then
+if [ "$breakpoint" = false ]; then
     echo "Looks like you haven't set any breakpoints. Set at least one breakpoint by clicking to the left of a line number and then re-run debug50!"
     exit 1
 fi
@@ -77,10 +77,10 @@ PID=$$
 
 # SIGUSR1 signals to begin the shim
 SHIM="/home/ubuntu/.c9/bin/c9gdbshim.js"
-trap "node $SHIM --debug=1 $*; $C9 gdb50stop $PID; echo; exit 0" SIGUSR1
+trap "node $SHIM --debug=1 $*; $C9 exec gdb50stop $PID; echo; exit 0" SIGUSR1
 
 # give PID to proxy for monitoring
-ERR="$($C9 gdb50start $PID)"
+ERR="$($C9 exec gdb50start $PID)"
 
 # c9 exec doesn't return non-zero on error!
 if [ "$ERR" = "Could not execute gdb50start" ]; then
