@@ -67,6 +67,9 @@ do
     fi
 done
 
+# use default value for IFS
+unset IFS
+
 if [ "$breakpoint" = false ]; then
     echo "Looks like you haven't set any breakpoints. Set at least one breakpoint by clicking to the left of a line number and then re-run debug50!"
     exit 1
