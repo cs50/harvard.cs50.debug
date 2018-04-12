@@ -52,7 +52,7 @@ sources=$(echo "$sources" | grep -Eo "/.*\.c,?")
 # ensure executable is more recent than source and header files
 breakpoint=false
 IFS=$'\n'
-for f in ${sources//,/ }
+for f in ${sources//,/}
 do
     if [ "$f" -nt "$1" ]; then
         echo "Looks like you've changed your code. Recompile and then re-run debug50!"
