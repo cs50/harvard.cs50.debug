@@ -28,7 +28,7 @@ define(function(require, exports, module) {
 
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
-        var process = [];
+        var process = {};
         var debugging = false;
 
         // delay execution of next debugging process if old is killed
@@ -47,12 +47,12 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=14;
+        var DEBUG_VER=15;
 
         /***** Methods *****/
 
         /**
-         * Helper function for gdb50Start to display errors.
+         * Helper function for startDebugger to display errors.
          */
         function handleErr(proc, err) {
             showError(proc, "error:", err);
@@ -93,7 +93,7 @@ define(function(require, exports, module) {
             proc.spawn("kill", { args: ["-SIGUSR1", pid] }, function() {});
 
             // provide proxy process with pid to monitor
-            var procOpts = {
+            const procOpts = {
                 cwd: cwd,
                 args: [pid.toString()],
                 debug: true
@@ -137,20 +137,31 @@ define(function(require, exports, module) {
          * monitors the shim process and is used by the debugger
          * API to determine if the process is still running.
          * Execute with:
-         * `c9 exec gdb50start; node ~/.c9/bin/c9gdbshim.js BIN ARGS`;
-         *  c9 exec gdb50stop`
+         * `c9 exec startGDB; node ~/.c9/bin/c9gdbshim.js BIN ARGS`;
+         *  c9 exec stopGDB`
          */
-        function gdb50Start(args, reconnect) {
-            if (args.length != 2) {
-                showError("Error: expected process PID!");
+        function startDebugger(args, reconnect) {
+            if (args.length != 3) {
+                showError("Error: expected process PID and a runner!");
                 return false;
             }
 
             // process pid passed by argument
-            var pid = args[1];
+            const pid = args[2];
+
+            // set monitor name
+            const runnerName = args[1] === "gdb" ?
+                "GDBMonitor" : (args[1] === "ikp3db" ?
+                    "IKP3DBMonitor" : null);
+
+            if (!runnerName) {
+                showError("Error: invalid debugger!");
+                return false;
+            }
+
 
             // fetch shell runner
-            run.getRunner("Shell50", function(err, runner) {
+            run.getRunner(runnerName, function(err, runner) {
                 if (err)
                     return handleErr("Runner fetch", err);
 
@@ -170,10 +181,10 @@ define(function(require, exports, module) {
         }
 
         /**
-         * gdb50Stop
-         * Stops and cleans a debug process started with gdb50Start.
+         * stopGDB
+         * Stops and cleans a debug process started with startGDB.
          */
-        function gdb50Stop(args) {
+        function stopDebugger(args) {
             if (args.length != 2) {
                 showError("Error: expected process PID!");
                 return false;
@@ -184,7 +195,7 @@ define(function(require, exports, module) {
                 debug.stop();
 
             // process pid passed by argument
-            var pid = args[1];
+            const pid = args[1];
 
             // must only run if a process is running
             if (process[pid] === undefined)
@@ -192,6 +203,7 @@ define(function(require, exports, module) {
 
             // stop PID and clean up
             process[pid].stop(cleanState.bind(this, pid));
+            return true;
         }
 
         /**
@@ -208,7 +220,7 @@ define(function(require, exports, module) {
                 return;
 
             // to rebuild process we need the runner
-            run.getRunner("Shell50", function(err, runner) {
+            run.getRunner("GDBMonitor", function(err, runner) {
                 if (err)
                     return cleanState(pid);
 
@@ -285,8 +297,8 @@ define(function(require, exports, module) {
             settings.set("user/output/nosavequestion", "true");
 
             // Monitors a shim started on the command line.
-            run.addRunner("Shell50", {
-                caption: "Shell50",
+            run.addRunner("GDBMonitor", {
+                caption: "GDBMonitor",
                 script: ['while kill -0 $args ; do sleep 1; done'],
                 debugger: "gdb",
                 $debugDefaultState: true,
@@ -297,17 +309,17 @@ define(function(require, exports, module) {
 
             // create commands that can be called from `c9 exec`
             commands.addCommand({
-                name: "gdb50start",
-                hint: "Kickstart GDB debugger from CLI",
+                name: "startDebugger",
+                hint: "Kickstart debugger from CLI",
                 group: "Run & Debug",
-                exec: gdb50Start
+                exec: startDebugger
             }, plugin);
 
             commands.addCommand({
-                name: "gdb50stop",
-                hint: "Stop GDB debugger started from CLI",
+                name: "stopDebugger",
+                hint: "Stop debugger started from CLI",
                 group: "Run & Debug",
-                exec: gdb50Stop
+                exec: stopDebugger
             }, plugin);
 
             commands.addCommand({
@@ -322,7 +334,7 @@ define(function(require, exports, module) {
                         // Yes
                         function() {
                             process.forEach(function(r, pid) {
-                                 gdb50Stop([null, pid]);
+                                 stopGDB([null, pid]);
                             });
                         },
 
@@ -354,6 +366,17 @@ define(function(require, exports, module) {
                     });
                 }
             }, plugin);
+
+            run.addRunner("IKP3DBMonitor", {
+                caption: "IKP3DBMonitor",
+                script: ['while kill -0 $args ; do sleep 1; done'],
+                debugger: "pythondebug",
+                debugport: 15471,
+                maxdepth: 50,
+                $debugDefaultState: true,
+                retryCount: 100,
+                retryInterval: 300,
+            }, run);
 
             writeDebug50();
 
