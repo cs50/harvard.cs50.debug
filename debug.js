@@ -35,16 +35,18 @@ define(function(require, exports, module) {
         var subsequent = null;
 
         // PID of the shim
-        var SETTING_PID="project/cs50/debug/@pid";
+        const SETTING_PID="project/cs50/debug/@pid";
 
         // PID of the (hidden) proxy process that monitors shim
-        var SETTING_PROXY="project/cs50/debug/@proxy";
+        const SETTING_PROXY="project/cs50/debug/@proxy";
 
         // name of the (hidden) proxy process
-        var SETTING_NAME="project/cs50/debug/@name";
+        const SETTING_NAME="project/cs50/debug/@name";
+
+        const SETTING_RUNNER="project/cs50/debug/@runner";
 
         // path of debug50 script revision number
-        var SETTING_VER="project/cs50/debug/@ver";
+        const SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
         var DEBUG_VER=15;
@@ -81,6 +83,7 @@ define(function(require, exports, module) {
                 settings.set(SETTING_PID, pid);
                 settings.set(SETTING_PROXY, process[pid].pid);
                 settings.set(SETTING_NAME, process[pid].name);
+                settings.set(SETTING_RUNNER, process[pid].runner.caption);
             });
         }
 
@@ -123,6 +126,7 @@ define(function(require, exports, module) {
             settings.set(SETTING_PID, null);
             settings.set(SETTING_NAME, null);
             settings.set(SETTING_PROXY, null);
+            settings.set(SETTING_RUNNER, null);
 
             if (subsequent) {
                 subsequent();
@@ -212,15 +216,16 @@ define(function(require, exports, module) {
          * exists.
          */
         function restoreProcess() {
-            var proxy = settings.getNumber(SETTING_PROXY);
-            var pid = settings.getNumber(SETTING_PID);
-            var name = settings.get(SETTING_NAME);
+            const proxy = settings.getNumber(SETTING_PROXY);
+            const pid = settings.getNumber(SETTING_PID);
+            const name = settings.get(SETTING_NAME);
+            const runnerName = settings.get(SETTING_RUNNER);
 
-            if (!proxy || !pid || !name)
+            if (!proxy || !pid || !name || !runnerName)
                 return;
 
             // to rebuild process we need the runner
-            run.getRunner("GDBMonitor", function(err, runner) {
+            run.getRunner(runnerName, function(err, runner) {
                 if (err)
                     return cleanState(pid);
 
