@@ -83,7 +83,7 @@ define(function(require, exports, module) {
                 settings.set(SETTING_PID, pid);
                 settings.set(SETTING_PROXY, process[pid].pid);
                 settings.set(SETTING_NAME, process[pid].name);
-                settings.set(SETTING_RUNNER, process[pid].runner.caption);
+                settings.set(SETTING_RUNNER, process[pid].runner.caption || process[pid].runner[0].caption);
             });
         }
 
