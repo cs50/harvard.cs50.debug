@@ -29,10 +29,6 @@ define(function(require, exports, module) {
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
         var process = {};
-        var debugging = false;
-
-        // delay execution of next debugging process if old is killed
-        var subsequent = null;
 
         // PID of the shim
         const SETTING_PID="project/cs50/debug/@pid";
@@ -49,7 +45,7 @@ define(function(require, exports, module) {
         const SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=15;
+        var DEBUG_VER=17;
 
         /***** Methods *****/
 
@@ -75,9 +71,6 @@ define(function(require, exports, module) {
                     handleErr("Debug start", err);
                     return cleanState(pid);
                 }
-
-                // successfully opened debugger
-                debugging = true;
 
                 // store pid state for later use
                 settings.set(SETTING_PID, pid);
@@ -109,29 +102,22 @@ define(function(require, exports, module) {
 
                 startDebugging(pid);
             });
+
+            process[pid].on("stopping", cleanState.bind(null, pid));
         }
 
         /**
          * Helper function to clean process and debugger state.
          */
         function cleanState(pid) {
-            if (debugging)
-                debug.stop();
-
+            debug.stop();
             if (pid)
                 delete process[pid];
-
-            debugging = false;
 
             settings.set(SETTING_PID, null);
             settings.set(SETTING_NAME, null);
             settings.set(SETTING_PROXY, null);
             settings.set(SETTING_RUNNER, null);
-
-            if (subsequent) {
-                subsequent();
-                subsequent = null;
-            }
         }
 
 
@@ -171,12 +157,7 @@ define(function(require, exports, module) {
 
                 // make sure debugger isn't already running
                 debug.checkAttached(function() {
-                    // no cli process running
-                    if (!debugging)
-                        return startProxy(args[0], pid, runner);
-
-                    // wait to startProxy until old has stopped
-                    subsequent = startProxy.bind(this, args[0], pid, runner);
+                    startProxy(args[0], pid, runner);
                 }, function() {
                     // user cancelled, abort the debug50 call
                     proc.spawn("kill", { args: [pid] }, function() {});
@@ -195,8 +176,7 @@ define(function(require, exports, module) {
             }
 
             // close debugger right away (waiting for proc to stop takes time)
-            if (debugging)
-                debug.stop();
+            debug.stop();
 
             // process pid passed by argument
             const pid = args[1];
@@ -236,6 +216,11 @@ define(function(require, exports, module) {
                     runner: [runner],
                     running: run.STARTED
                 });
+
+                if (!process[pid] || process[pid].running === run.STOPPED)
+                    cleanState(pid);
+                else
+                    process[pid].on("stopping", cleanState.bind(null, pid));
 
                 // reconnect the debugger
                 startDebugging(pid, true);
@@ -328,34 +313,6 @@ define(function(require, exports, module) {
             }, plugin);
 
             commands.addCommand({
-                name: "gdb50forcestop",
-                hint: "Force-stop GDB debugger",
-                group: "Run & Debug",
-                exec: function() {
-                    askQuestion(
-                        "Stop debugging", "",
-                        "Are you sure you want to force-stop the debugger?",
-
-                        // Yes
-                        function() {
-                            process.forEach(function(r, pid) {
-                                 stopGDB([null, pid]);
-                            });
-                        },
-
-                        // No
-                        function() {},
-
-                        // hide "All" and "Cancel" buttons
-                        {
-                            all: false,
-                            cancel: false
-                        }
-                    );
-                }
-            }, plugin);
-
-            commands.addCommand({
                 name: "breakpoint_set",
                 hint: "Check if source file has at least a breakpoint",
                 group: "Run & Debug",
@@ -396,8 +353,6 @@ define(function(require, exports, module) {
         });
         plugin.on("unload", function() {
             process = null;
-            subsequent = null;
-            debugging = false;
         });
 
         /***** Register and define API *****/
