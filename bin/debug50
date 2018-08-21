@@ -13,12 +13,6 @@ else
     C9="/mnt/shared/sbin/c9"
 fi
 
-# allow force-stopping
-if [ "$1" = "-HUP" ]; then
-    $C9 exec gdb50forcestop
-    exit 0
-fi
-
 if ! [ -f "$1" ]; then
     echo -n "debug50: $1: "
     if [ -d "$1" ]; then

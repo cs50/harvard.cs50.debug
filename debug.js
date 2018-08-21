@@ -43,7 +43,7 @@ define(function(require, exports, module) {
         var SETTING_VER="project/cs50/debug/@ver";
 
         // version of debug50 file
-        var DEBUG_VER=16;
+        var DEBUG_VER=17;
 
         /***** Methods *****/
 
@@ -293,34 +293,6 @@ define(function(require, exports, module) {
                 hint: "Stop GDB debugger started from CLI",
                 group: "Run & Debug",
                 exec: gdb50Stop
-            }, plugin);
-
-            commands.addCommand({
-                name: "gdb50forcestop",
-                hint: "Force-stop GDB debugger",
-                group: "Run & Debug",
-                exec: function() {
-                    askQuestion(
-                        "Stop debugging", "",
-                        "Are you sure you want to force-stop the debugger?",
-
-                        // Yes
-                        function() {
-                            process.forEach(function(r, pid) {
-                                 gdb50Stop([null, pid]);
-                            });
-                        },
-
-                        // No
-                        function() {},
-
-                        // hide "All" and "Cancel" buttons
-                        {
-                            all: false,
-                            cancel: false
-                        }
-                    );
-                }
             }, plugin);
 
             commands.addCommand({
