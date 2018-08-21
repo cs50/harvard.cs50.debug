@@ -28,11 +28,7 @@ define(function(require, exports, module) {
 
         /***** Initialization *****/
         var plugin = new Plugin("Ajax.org", main.consumes);
-        var process = [];
-        var debugging = false;
-
-        // delay execution of next debugging process if old is killed
-        var subsequent = null;
+        var process = {};
 
         // PID of the shim
         var SETTING_PID="project/cs50/debug/@pid";
@@ -74,9 +70,6 @@ define(function(require, exports, module) {
                     return cleanState(pid);
                 }
 
-                // successfully opened debugger
-                debugging = true;
-
                 // store pid state for later use
                 settings.set(SETTING_PID, pid);
                 settings.set(SETTING_PROXY, process[pid].pid);
@@ -106,28 +99,21 @@ define(function(require, exports, module) {
 
                 startDebugging(pid);
             });
+
+            process[pid].on("stopping", cleanState.bind(null, pid));
         }
 
         /**
          * Helper function to clean process and debugger state.
          */
         function cleanState(pid) {
-            if (debugging)
-                debug.stop();
-
+            debug.stop();
             if (pid)
                 delete process[pid];
-
-            debugging = false;
 
             settings.set(SETTING_PID, null);
             settings.set(SETTING_NAME, null);
             settings.set(SETTING_PROXY, null);
-
-            if (subsequent) {
-                subsequent();
-                subsequent = null;
-            }
         }
 
 
@@ -156,12 +142,7 @@ define(function(require, exports, module) {
 
                 // make sure debugger isn't already running
                 debug.checkAttached(function() {
-                    // no cli process running
-                    if (!debugging)
-                        return startProxy(args[0], pid, runner);
-
-                    // wait to startProxy until old has stopped
-                    subsequent = startProxy.bind(this, args[0], pid, runner);
+                    startProxy(args[0], pid, runner);
                 }, function() {
                     // user cancelled, abort the debug50 call
                     proc.spawn("kill", { args: [pid] }, function() {});
@@ -180,8 +161,7 @@ define(function(require, exports, module) {
             }
 
             // close debugger right away (waiting for proc to stop takes time)
-            if (debugging)
-                debug.stop();
+            debug.stop();
 
             // process pid passed by argument
             var pid = args[1];
@@ -219,6 +199,11 @@ define(function(require, exports, module) {
                     runner: [runner],
                     running: run.STARTED
                 });
+
+                if (!process[pid] || process[pid].running === run.STOPPED)
+                    cleanState(pid);
+                else
+                    process[pid].on("stopping", cleanState.bind(null, pid));
 
                 // reconnect the debugger
                 startDebugging(pid, true);
@@ -368,8 +353,6 @@ define(function(require, exports, module) {
         });
         plugin.on("unload", function() {
             process = null;
-            subsequent = null;
-            debugging = false;
         });
 
         /***** Register and define API *****/
