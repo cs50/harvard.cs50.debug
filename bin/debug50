@@ -27,10 +27,16 @@ fi
 # PID of current execution
 PID=$$
 
+if [[ "$1" = *.py || $(head --lines=1 "$1") =~ ^#!.*python.*$ ]]; then
+    trap "python -m ikp3db --ikpdb-port=15471 --ikpdb-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
+
+    # give PID to proxy for monitoring
+    ERR=$($C9 exec startDebugger ikp3db $PID)
+
 # ensure file is executable and debuggable
 # http://stackoverflow.com/a/10319835/1797347
-# http://stackoverflow.com/a/12801855/1797347
-if [ $(file "$1" | grep -o executable) ]; then
+# script with .py extension or python shebang
+elif [ $(file "$1" | grep -o executable) ]; then
     if ! [ "$(readelf -wL "$1")" ]; then
         echo "Can't debug this program! Are you sure you compiled it with -ggdb?"
         exit 1
@@ -75,13 +81,6 @@ EOF
 
     # give PID to proxy for monitoring
     ERR=$($C9 exec startDebugger gdb $PID)
-
-# script with .py extension or python shebang
-elif [[ "$1" = *.py || $(head --lines=1 "$1") =~ ^#!.*python.*$ ]]; then
-    trap "python -m ikp3db --ikpdb-port=15471 --ikpdb-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
-
-    # give PID to proxy for monitoring
-    ERR=$($C9 exec startDebugger ikp3db $PID)
 fi
 
 # c9 exec doesn't return non-zero on error!
