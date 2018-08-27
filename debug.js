@@ -340,7 +340,7 @@ define(function(require, exports, module) {
                     return breakpoints.breakpoints.some(function(breakpoint) {
 
                         // slash at the beginning means ~/workspace/
-                        return breakpoint.path.replace(/^\//, c9.workspaceDir + "/").replace(/^~/, c9.home) == args[1];
+                        return breakpoint.path.replace(/^\//, c9.environmentDir + "/").replace(/^~/, c9.home) == args[1];
                     });
                 }
             }, plugin);
