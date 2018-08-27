@@ -182,12 +182,11 @@ define(function(require, exports, module) {
             const pid = args[1];
 
             // must only run if a process is running
-            if (process[pid] === undefined)
-                return false;
+            if (!process[pid])
+                return;
 
             // stop PID and clean up
             process[pid].stop(cleanState.bind(this, pid));
-            return true;
         }
 
         /**
@@ -289,12 +288,23 @@ define(function(require, exports, module) {
             // Monitors a shim started on the command line.
             run.addRunner("GDBMonitor", {
                 caption: "GDBMonitor",
-                script: ['while kill -0 $args ; do sleep 1; done'],
+                script: ["while kill -0 $args ; do sleep 1; done"],
                 debugger: "gdb",
                 $debugDefaultState: true,
                 retryCount: 100,
                 retryInterval: 300,
                 socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
+            }, run);
+
+            run.addRunner("IKP3DBMonitor", {
+                caption: "IKP3DBMonitor",
+                script: ["while kill -0 $args ; do sleep 1; done"],
+                debugger: "pythondebug",
+                debugport: 15471,
+                maxdepth: 50,
+                $debugDefaultState: true,
+                retryCount: 100,
+                retryInterval: 300
             }, run);
 
             // create commands that can be called from `c9 exec`
@@ -328,17 +338,6 @@ define(function(require, exports, module) {
                     });
                 }
             }, plugin);
-
-            run.addRunner("IKP3DBMonitor", {
-                caption: "IKP3DBMonitor",
-                script: ['while kill -0 $args ; do sleep 1; done'],
-                debugger: "pythondebug",
-                debugport: 15471,
-                maxdepth: 50,
-                $debugDefaultState: true,
-                retryCount: 100,
-                retryInterval: 300,
-            }, run);
 
             writeDebug50();
 
