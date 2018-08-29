@@ -2,47 +2,43 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "breakpoints", "c9", "commands", "dialog.question",
-        "dialog.error", "debugger", "fs", "proc", "run", "run.gui", "settings",
-        "util", "watcher"
+        "Plugin", "breakpoints", "c9", "commands", "dialog.error", "debugger",
+        "fs", "proc", "run", "settings"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
 
     function main(options, imports, register) {
-        var Plugin = imports.Plugin;
-        var askQuestion = imports["dialog.question"].show;
-        var breakpoints = imports.breakpoints;
-        var c9 = imports.c9;
-        var commands = imports.commands;
-        var debug = imports.debugger;
-        var fs = imports.fs;
-        var proc = imports.proc;
-        var run = imports.run;
-        var rungui = imports["run.gui"];
-        var showError = imports["dialog.error"].show;
-        var settings = imports.settings;
-        var util = imports.util;
+        const Plugin = imports.Plugin;
+        const breakpoints = imports.breakpoints;
+        const c9 = imports.c9;
+        const commands = imports.commands;
+        const debug = imports.debugger;
+        const fs = imports.fs;
+        const proc = imports.proc;
+        const run = imports.run;
+        const showError = imports["dialog.error"].show;
+        const settings = imports.settings;
 
-        var _ = require("lodash");
+        const _ = require("lodash");
 
         /***** Initialization *****/
-        var plugin = new Plugin("Ajax.org", main.consumes);
-        var process = {};
+        const plugin = new Plugin("Ajax.org", main.consumes);
+        let process = {};
 
         // PID of the shim
-        const SETTING_PID="project/cs50/debug/@pid";
+        const SETTING_PID = "project/cs50/debug/@pid";
 
         // PID of the (hidden) proxy process that monitors shim
-        const SETTING_PROXY="project/cs50/debug/@proxy";
+        const SETTING_PROXY = "project/cs50/debug/@proxy";
 
         // name of the (hidden) proxy process
-        const SETTING_NAME="project/cs50/debug/@name";
+        const SETTING_NAME = "project/cs50/debug/@name";
 
-        const SETTING_RUNNER="project/cs50/debug/@runner";
+        const SETTING_RUNNER = "project/cs50/debug/@runner";
 
         // path of debug50 script revision number
-        const SETTING_VER="project/cs50/debug/@ver";
+        const SETTING_VER = "project/cs50/debug/@ver";
 
         // named pipe for communication between nc proxy and ikp3db
         // created by debug50 if doesn't exist
@@ -55,7 +51,7 @@ define(function(require, exports, module) {
         const IKP3DB_PORT = 15473;
 
         // version of debug50 file
-        var DEBUG_VER=17;
+        const DEBUG_VER = 17;
 
         /***** Methods *****/
 
@@ -251,17 +247,17 @@ define(function(require, exports, module) {
          */
         function writeDebug50(cb) {
             // debug50's path on the system
-            var path = "~/.cs50/bin/debug50";
+            const path = "~/.cs50/bin/debug50";
 
             // ensure debug50 doesn't exist
             fs.exists(path, function(exists) {
                 // fetch the currently set version
-                var ver = settings.getNumber(SETTING_VER);
+                const ver = settings.getNumber(SETTING_VER);
 
                 // write debug50 when should
                 if (!exists || isNaN(ver) || ver < DEBUG_VER) {
                     // retrive debug50's contents
-                    var content = require("text!./bin/debug50");
+                    const content = require("text!./bin/debug50");
 
                     // write debug50
                     fs.writeFile(path, content, function(err){
