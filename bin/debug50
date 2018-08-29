@@ -2,7 +2,7 @@
 
 # check args
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <executable|python script> [arguments]"
+    echo "Usage: $0 PROGRAM [ARGUMENT ...]"
     exit 1
 fi
 
