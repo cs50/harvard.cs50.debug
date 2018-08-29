@@ -24,11 +24,16 @@ if ! [ -f "$1" ]; then
     exit 1
 fi
 
+# create named pipe for netcat and ikp3db communication
+if [ ! -p /home/ubuntu/.c9/ikp3dbpipe ]; then
+    mkfifo /home/ubuntu/.c9/ikp3dbpipe
+fi
+
 # PID of current execution
 PID=$$
 
 if [[ "$1" = *.py || $(head --lines=1 "$1") =~ ^#!.*python.*$ ]]; then
-    trap "python -m ikp3db --ikpdb-port=15471 --ikpdb-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
+    trap "python -m ikp3db --ikpdb-port=15473 --ikpdb-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
 
     # give PID to proxy for monitoring
     ERR=$($C9 exec startDebugger ikp3db $PID)

@@ -44,6 +44,16 @@ define(function(require, exports, module) {
         // path of debug50 script revision number
         const SETTING_VER="project/cs50/debug/@ver";
 
+        // named pipe for communication between nc proxy and ikp3db
+        // created by debug50 if doesn't exist
+        const NAMED_PIPE = "/home/ubuntu/.c9/ikp3dbpipe";
+
+        // netcat proxy source port
+        const PROXY_SOURCE_PORT = 15471;
+
+        // netcat proxy target port
+        const IKP3DB_PORT = 15473;
+
         // version of debug50 file
         var DEBUG_VER=17;
 
@@ -298,9 +308,9 @@ define(function(require, exports, module) {
 
             run.addRunner("IKP3DBMonitor", {
                 caption: "IKP3DBMonitor",
-                script: ["while kill -0 $args ; do sleep 1; done"],
+                script: [`{ nc -k -l ${PROXY_SOURCE_PORT} <${NAMED_PIPE} | nc 127.0.0.1 ${IKP3DB_PORT} >${NAMED_PIPE} & }; PID=$!; while kill -0 $args ; do sleep 1; done; kill -9 $args `],
                 debugger: "pythondebug",
-                debugport: 15471,
+                debugport: PROXY_SOURCE_PORT,
                 maxdepth: 50,
                 $debugDefaultState: true,
                 retryCount: 100,
