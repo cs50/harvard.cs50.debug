@@ -2,53 +2,61 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "breakpoints", "c9", "commands", "dialog.question",
-        "dialog.error", "debugger", "fs", "proc", "run", "run.gui", "settings",
-        "util", "watcher"
+        "Plugin", "breakpoints", "c9", "commands", "dialog.error", "debugger",
+        "fs", "proc", "run", "settings"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
 
     function main(options, imports, register) {
-        var Plugin = imports.Plugin;
-        var askQuestion = imports["dialog.question"].show;
-        var breakpoints = imports.breakpoints;
-        var c9 = imports.c9;
-        var commands = imports.commands;
-        var debug = imports.debugger;
-        var fs = imports.fs;
-        var proc = imports.proc;
-        var run = imports.run;
-        var rungui = imports["run.gui"];
-        var showError = imports["dialog.error"].show;
-        var settings = imports.settings;
-        var util = imports.util;
+        const Plugin = imports.Plugin;
+        const breakpoints = imports.breakpoints;
+        const c9 = imports.c9;
+        const commands = imports.commands;
+        const debug = imports.debugger;
+        const fs = imports.fs;
+        const proc = imports.proc;
+        const run = imports.run;
+        const showError = imports["dialog.error"].show;
+        const settings = imports.settings;
 
-        var _ = require("lodash");
+        const _ = require("lodash");
 
         /***** Initialization *****/
-        var plugin = new Plugin("Ajax.org", main.consumes);
-        var process = {};
+        const plugin = new Plugin("Ajax.org", main.consumes);
+        let process = {};
 
         // PID of the shim
-        var SETTING_PID="project/cs50/debug/@pid";
+        const SETTING_PID = "project/cs50/debug/@pid";
 
         // PID of the (hidden) proxy process that monitors shim
-        var SETTING_PROXY="project/cs50/debug/@proxy";
+        const SETTING_PROXY = "project/cs50/debug/@proxy";
 
         // name of the (hidden) proxy process
-        var SETTING_NAME="project/cs50/debug/@name";
+        const SETTING_NAME = "project/cs50/debug/@name";
+
+        const SETTING_RUNNER = "project/cs50/debug/@runner";
 
         // path of debug50 script revision number
-        var SETTING_VER="project/cs50/debug/@ver";
+        const SETTING_VER = "project/cs50/debug/@ver";
+
+        // named pipe for communication between nc proxy and ikp3db
+        // created by debug50 if doesn't exist
+        const NAMED_PIPE = "/home/ubuntu/.c9/ikp3dbpipe";
+
+        // netcat proxy source port
+        const PROXY_SOURCE_PORT = 15471;
+
+        // netcat proxy target port
+        const IKP3DB_PORT = 15473;
 
         // version of debug50 file
-        var DEBUG_VER=17;
+        const DEBUG_VER = 17;
 
         /***** Methods *****/
 
         /**
-         * Helper function for gdb50Start to display errors.
+         * Helper function for startDebugger to display errors.
          */
         function handleErr(proc, err) {
             showError(proc, "error:", err);
@@ -74,6 +82,7 @@ define(function(require, exports, module) {
                 settings.set(SETTING_PID, pid);
                 settings.set(SETTING_PROXY, process[pid].pid);
                 settings.set(SETTING_NAME, process[pid].name);
+                settings.set(SETTING_RUNNER, process[pid].runner.caption || process[pid].runner[0].caption);
             });
         }
 
@@ -86,7 +95,7 @@ define(function(require, exports, module) {
             proc.spawn("kill", { args: ["-SIGUSR1", pid] }, function() {});
 
             // provide proxy process with pid to monitor
-            var procOpts = {
+            const procOpts = {
                 cwd: cwd,
                 args: [pid.toString()],
                 debug: true
@@ -114,6 +123,7 @@ define(function(require, exports, module) {
             settings.set(SETTING_PID, null);
             settings.set(SETTING_NAME, null);
             settings.set(SETTING_PROXY, null);
+            settings.set(SETTING_RUNNER, null);
         }
 
 
@@ -123,20 +133,31 @@ define(function(require, exports, module) {
          * monitors the shim process and is used by the debugger
          * API to determine if the process is still running.
          * Execute with:
-         * `c9 exec gdb50start; node ~/.c9/bin/c9gdbshim.js BIN ARGS`;
-         *  c9 exec gdb50stop`
+         * `c9 exec startGDB; node ~/.c9/bin/c9gdbshim.js BIN ARGS`;
+         *  c9 exec stopGDB`
          */
-        function gdb50Start(args, reconnect) {
-            if (args.length != 2) {
-                showError("Error: expected process PID!");
+        function startDebugger(args, reconnect) {
+            if (args.length != 3) {
+                showError("Error: expected process PID and a runner!");
                 return false;
             }
 
             // process pid passed by argument
-            var pid = args[1];
+            const pid = args[2];
+
+            // set monitor name
+            const runnerName = args[1] === "gdb" ?
+                "GDBMonitor" : (args[1] === "ikp3db" ?
+                    "IKP3DBMonitor" : null);
+
+            if (!runnerName) {
+                showError("Error: invalid debugger!");
+                return false;
+            }
+
 
             // fetch shell runner
-            run.getRunner("Shell50", function(err, runner) {
+            run.getRunner(runnerName, function(err, runner) {
                 if (err)
                     return handleErr("Runner fetch", err);
 
@@ -151,10 +172,10 @@ define(function(require, exports, module) {
         }
 
         /**
-         * gdb50Stop
-         * Stops and cleans a debug process started with gdb50Start.
+         * stopGDB
+         * Stops and cleans a debug process started with startGDB.
          */
-        function gdb50Stop(args) {
+        function stopDebugger(args) {
             if (args.length != 2) {
                 showError("Error: expected process PID!");
                 return false;
@@ -164,11 +185,11 @@ define(function(require, exports, module) {
             debug.stop();
 
             // process pid passed by argument
-            var pid = args[1];
+            const pid = args[1];
 
             // must only run if a process is running
-            if (process[pid] === undefined)
-                return false;
+            if (!process[pid])
+                return;
 
             // stop PID and clean up
             process[pid].stop(cleanState.bind(this, pid));
@@ -180,15 +201,16 @@ define(function(require, exports, module) {
          * exists.
          */
         function restoreProcess() {
-            var proxy = settings.getNumber(SETTING_PROXY);
-            var pid = settings.getNumber(SETTING_PID);
-            var name = settings.get(SETTING_NAME);
+            const proxy = settings.getNumber(SETTING_PROXY);
+            const pid = settings.getNumber(SETTING_PID);
+            const name = settings.get(SETTING_NAME);
+            const runnerName = settings.get(SETTING_RUNNER);
 
-            if (!proxy || !pid || !name)
+            if (!proxy || !pid || !name || !runnerName)
                 return;
 
             // to rebuild process we need the runner
-            run.getRunner("Shell50", function(err, runner) {
+            run.getRunner(runnerName, function(err, runner) {
                 if (err)
                     return cleanState(pid);
 
@@ -225,17 +247,17 @@ define(function(require, exports, module) {
          */
         function writeDebug50(cb) {
             // debug50's path on the system
-            var path = "~/.cs50/bin/debug50";
+            const path = "~/.cs50/bin/debug50";
 
             // ensure debug50 doesn't exist
             fs.exists(path, function(exists) {
                 // fetch the currently set version
-                var ver = settings.getNumber(SETTING_VER);
+                const ver = settings.getNumber(SETTING_VER);
 
                 // write debug50 when should
                 if (!exists || isNaN(ver) || ver < DEBUG_VER) {
                     // retrive debug50's contents
-                    var content = require("text!./bin/debug50");
+                    const content = require("text!./bin/debug50");
 
                     // write debug50
                     fs.writeFile(path, content, function(err){
@@ -270,9 +292,9 @@ define(function(require, exports, module) {
             settings.set("user/output/nosavequestion", "true");
 
             // Monitors a shim started on the command line.
-            run.addRunner("Shell50", {
-                caption: "Shell50",
-                script: ['while kill -0 $args ; do sleep 1; done'],
+            run.addRunner("GDBMonitor", {
+                caption: "GDBMonitor",
+                script: ["while kill -0 $args ; do sleep 1; done"],
                 debugger: "gdb",
                 $debugDefaultState: true,
                 retryCount: 100,
@@ -280,19 +302,30 @@ define(function(require, exports, module) {
                 socketpath: "/home/ubuntu/.c9/gdbdebugger.socket"
             }, run);
 
+            run.addRunner("IKP3DBMonitor", {
+                caption: "IKP3DBMonitor",
+                script: [`{ nc -k -l ${PROXY_SOURCE_PORT} <${NAMED_PIPE} | nc 127.0.0.1 ${IKP3DB_PORT} >${NAMED_PIPE} & }; PID=$!; while kill -0 $args ; do sleep 1; done; kill -9 $args `],
+                debugger: "pythondebug",
+                debugport: PROXY_SOURCE_PORT,
+                maxdepth: 50,
+                $debugDefaultState: true,
+                retryCount: 100,
+                retryInterval: 300
+            }, run);
+
             // create commands that can be called from `c9 exec`
             commands.addCommand({
-                name: "gdb50start",
-                hint: "Kickstart GDB debugger from CLI",
+                name: "startDebugger",
+                hint: "Kickstart debugger from CLI",
                 group: "Run & Debug",
-                exec: gdb50Start
+                exec: startDebugger
             }, plugin);
 
             commands.addCommand({
-                name: "gdb50stop",
-                hint: "Stop GDB debugger started from CLI",
+                name: "stopDebugger",
+                hint: "Stop debugger started from CLI",
                 group: "Run & Debug",
-                exec: gdb50Stop
+                exec: stopDebugger
             }, plugin);
 
             commands.addCommand({

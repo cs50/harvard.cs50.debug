@@ -2,7 +2,7 @@
 
 # check args
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 executable [arguments]"
+    echo "Usage: $0 PROGRAM [ARGUMENT ...]"
     exit 1
 fi
 
@@ -24,65 +24,72 @@ if ! [ -f "$1" ]; then
     exit 1
 fi
 
-# ensure file is executable and debuggable
-# http://stackoverflow.com/a/10319835/1797347
-# http://stackoverflow.com/a/12801855/1797347
-if ! [ $(file "$1" | grep -o executable) ]; then
-    echo "Can't debug this program! Afraid debug50 only supports compiled C programs!"
-    exit 1
-elif ! [ "$(readelf -wL "$1")" ]; then
-    echo "Can't debug this program! Are you sure you compiled it with -ggdb?"
-    exit 1
-fi
-
-# get source and header files from gdb
-sources=$(gdb -q "$1" <<EOF
-info sources
-EOF
-)
-
-sources=$(echo "$sources" | grep -Eo "/.*\.c,?")
-
-# ensure executable is more recent than source and header files
-breakpoint=false
-
-# handle file1.c, file2.c and file1.c\nfile2.c
-IFS=$', \n'
-for f in $sources
-do
-    if [ "$f" -nt "$1" ]; then
-        echo "Looks like you've changed your code. Recompile and then re-run debug50!"
-        exit 1
-    fi
-
-    # check if any breakpoints are set in current source file
-    if [ "$breakpoint" = false ]; then
-        if [ -z "$($C9 exec  breakpoint_set "$f")" ]; then
-            breakpoint=true
-        fi
-    fi
-done
-
-# use default value for IFS
-unset IFS
-
-if [ "$breakpoint" = false ]; then
-    echo "Looks like you haven't set any breakpoints. Set at least one breakpoint by clicking to the left of a line number and then re-run debug50!"
-    exit 1
+# create named pipe for netcat and ikp3db communication
+if [ ! -p /home/ubuntu/.c9/ikp3dbpipe ]; then
+    mkfifo /home/ubuntu/.c9/ikp3dbpipe
 fi
 
 # PID of current execution
 PID=$$
 
-# SIGUSR1 signals to begin the shim
-SHIM="/home/ubuntu/.c9/bin/c9gdbshim.js"
-trap "node $SHIM --debug=1 $*; $C9 exec gdb50stop $PID; echo; exit 0" SIGUSR1
+if [[ "$1" = *.py || $(head --lines=1 "$1") =~ ^#!.*python.*$ ]]; then
+    trap "python -m ikp3db --ikpdb-port=15473 --ikpdb-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
 
-# give PID to proxy for monitoring
-ERR="$($C9 exec gdb50start $PID)"
+    # give PID to proxy for monitoring
+    ERR=$($C9 exec startDebugger ikp3db $PID)
+
+# ensure file is executable and debuggable
+# http://stackoverflow.com/a/10319835/1797347
+# script with .py extension or python shebang
+elif [ $(file "$1" | grep -o executable) ]; then
+    if ! [ "$(readelf -wL "$1")" ]; then
+        echo "Can't debug this program! Are you sure you compiled it with -ggdb?"
+        exit 1
+    fi
+
+    # get source files from gdb
+    sources=$(gdb -q "$1" <<EOF
+info sources
+EOF
+)
+    sources=$(echo "$sources" | grep -Eo "/.*\.c,?")
+    breakpoint=false
+    IFS=$'\n'
+    for f in ${sources//,/}
+    do
+        # ensure executable is more recent than source and header files
+        if [ "$f" -nt "$1" ]; then
+            echo "Looks like you've changed your code. Recompile and then re-run debug50!"
+            exit 1
+        fi
+
+        # check for breakpoints in current source file
+        if [ "$breakpoint" = false ]; then
+            if [ -z "$($C9 exec  breakpoint_set "$f")" ]; then
+                breakpoint=true
+            fi
+        fi
+    done
+
+    # use default value for IFS
+    unset IFS
+
+    # no breakpoints found
+    if [ "$breakpoint" = false ]; then
+        echo "Looks like you haven't set any breakpoints. Set at least one breakpoint by clicking to the left of a line number and then re-run debug50!"
+        exit 1
+    fi
+
+    # SIGUSR1 signals to begin the shim
+    SHIM="/home/ubuntu/.c9/bin/c9gdbshim.js"
+    trap "node $SHIM --debug=1 $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
+
+    # give PID to proxy for monitoring
+    ERR=$($C9 exec startDebugger gdb $PID)
+fi
 
 # c9 exec doesn't return non-zero on error!
-if [ "$ERR" = "Could not execute gdb50start" ]; then
+if [ "$ERR" = "Could not execute startDebugger" ]; then
     echo "Unable to start!"
     exit 1
 fi
