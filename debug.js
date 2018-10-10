@@ -2,8 +2,8 @@ define(function(require, exports, module) {
     "use strict";
 
     main.consumes = [
-        "Plugin", "breakpoints", "c9", "commands", "dialog.error", "debugger",
-        "fs", "proc", "run", "settings"
+        "breakpoints", "c9", "commands", "dialog.error", "debugger",
+        "fs", "Plugin", "proc", "run", "settings"
     ];
     main.provides = ["harvard.cs50.debug"];
     return main;
@@ -32,25 +32,25 @@ define(function(require, exports, module) {
         // PID of the (hidden) proxy process that monitors shim
         const SETTING_PROXY = "project/cs50/debug/@proxy";
 
-        // name of the (hidden) proxy process
+        // Name of the (hidden) proxy process
         const SETTING_NAME = "project/cs50/debug/@name";
 
         const SETTING_RUNNER = "project/cs50/debug/@runner";
 
-        // path of debug50 script revision number
+        // Path of debug50 script revision number
         const SETTING_VER = "project/cs50/debug/@ver";
 
-        // named pipe for communication between nc proxy and ikp3db
+        // Named pipe for communication between nc proxy and ikp3db
         // created by debug50 if doesn't exist
         const NAMED_PIPE = "/home/ubuntu/.c9/ikp3dbpipe";
 
-        // netcat proxy source port
+        // Netcat proxy source port
         const PROXY_SOURCE_PORT = 15471;
 
-        // netcat proxy target port
+        // Netcat proxy target port
         const IKP3DB_PORT = 15473;
 
-        // version of debug50 file
+        // Version of debug50 file
         const DEBUG_VER = 18;
 
         /***** Methods *****/
@@ -71,14 +71,14 @@ define(function(require, exports, module) {
             if (reconnect == undefined)
                 reconnect = false;
 
-            // kick off debugger
-            debug.debug(process[pid], reconnect, function(err) {
+            // Kick off debugger
+            debug.debug(process[pid], reconnect, err => {
                 if (err) {
                     handleErr("Debug start", err);
                     return cleanState(pid);
                 }
 
-                // store pid state for later use
+                // Store pid state for later use
                 settings.set(SETTING_PID, pid);
                 settings.set(SETTING_PROXY, process[pid].pid);
                 settings.set(SETTING_NAME, process[pid].name);
@@ -91,18 +91,18 @@ define(function(require, exports, module) {
          * process, saving state in event of reconnect.
          */
         function startProxy(cwd, pid, runner) {
-            // start shim by sending debug50 the SIGUSR1 signal
-            proc.spawn("kill", { args: ["-SIGUSR1", pid] }, function() {});
+            // Start shim by sending debug50 the SIGUSR1 signal
+            proc.spawn("kill", { args: ["-SIGUSR1", pid] }, () => {});
 
-            // provide proxy process with pid to monitor
+            // Provide proxy process with pid to monitor
             const procOpts = {
                 cwd: cwd,
                 args: [pid.toString()],
                 debug: true
             };
 
-            // start proxy process and begin debugging if successful
-            process[pid] = run.run(runner, procOpts, function(err) {
+            // Start proxy process and begin debugging if successful
+            process[pid] = run.run(runner, procOpts, err => {
                 if (err)
                     return handleErr("Proxy process run", err);
 
@@ -142,10 +142,10 @@ define(function(require, exports, module) {
                 return false;
             }
 
-            // process pid passed by argument
+            // Process pid passed by argument
             const pid = args[2];
 
-            // set monitor name
+            // Set monitor name
             const runnerName = args[1] === "gdb" ?
                 "GDBMonitor" : (args[1] === "ikp3db" ?
                     "IKP3DBMonitor" : null);
@@ -156,17 +156,17 @@ define(function(require, exports, module) {
             }
 
 
-            // fetch shell runner
-            run.getRunner(runnerName, function(err, runner) {
+            // Fetch shell runner
+            run.getRunner(runnerName, (err, runner) => {
                 if (err)
                     return handleErr("Runner fetch", err);
 
-                // make sure debugger isn't already running
-                debug.checkAttached(function() {
+                // Make sure debugger isn't already running
+                debug.checkAttached(() => {
                     startProxy(args[0], pid, runner);
-                }, function() {
-                    // user cancelled, abort the debug50 call
-                    proc.spawn("kill", { args: [pid] }, function() {});
+                }, () => {
+                    // User cancelled, abort the debug50 call
+                    proc.spawn("kill", { args: [pid] }, () => {});
                 });
             });
         }
@@ -181,17 +181,17 @@ define(function(require, exports, module) {
                 return false;
             }
 
-            // close debugger right away (waiting for proc to stop takes time)
+            // Close debugger right away (waiting for proc to stop takes time)
             debug.stop();
 
-            // process pid passed by argument
+            // Process pid passed by argument
             const pid = args[1];
 
-            // must only run if a process is running
+            // Must only run if a process is running
             if (!process[pid])
                 return;
 
-            // stop PID and clean up
+            // Stop PID and clean up
             process[pid].stop(cleanState.bind(this, pid));
         }
 
@@ -209,12 +209,12 @@ define(function(require, exports, module) {
             if (!proxy || !pid || !name || !runnerName)
                 return;
 
-            // to rebuild process we need the runner
-            run.getRunner(runnerName, function(err, runner) {
+            // To rebuild process we need the runner
+            run.getRunner(runnerName, (err, runner) => {
                 if (err)
                     return cleanState(pid);
 
-                // recover process from saved state
+                // Recover process from saved state
                 process[pid] = run.restoreProcess({
                     pid: proxy,
                     name: name,
@@ -227,7 +227,7 @@ define(function(require, exports, module) {
                 else
                     process[pid].on("stopping", cleanState.bind(null, pid));
 
-                // reconnect the debugger
+                // Reconnect the debugger
                 startDebugging(pid, true);
             });
         }
@@ -246,37 +246,37 @@ define(function(require, exports, module) {
          * @param [cb] a callback to call after debug50's been written
          */
         function writeDebug50(cb) {
-            // debug50's path on the system
+            // Debug50's path on the system
             const path = "~/.cs50/bin/debug50";
 
-            // ensure debug50 doesn't exist
-            fs.exists(path, function(exists) {
-                // fetch the currently set version
+            // Ensure debug50 doesn't exist
+            fs.exists(path, exists => {
+                // Fetch the currently set version
                 const ver = settings.getNumber(SETTING_VER);
 
-                // write debug50 when should
+                // Write debug50 when should
                 if (!exists || isNaN(ver) || ver < DEBUG_VER) {
-                    // retrive debug50's contents
+                    // Retrive debug50's contents
                     const content = require("text!./bin/debug50");
 
-                    // write debug50
-                    fs.writeFile(path, content, function(err){
+                    // Write debug50
+                    fs.writeFile(path, content, (err) => {
                         if (err) {
                             console.error(err);
                             return _.isFunction(cb) && cb(err);
                         }
 
                         // chmod debug50
-                        fs.chmod(path, 755, function(err){
+                        fs.chmod(path, 755, err => {
                             if (err) {
                                 console.error(err);
                                 return _.isFunction(cb) && cb(err);
                             }
 
-                            // set or update version
+                            // Set or update version
                             settings.set(SETTING_VER, DEBUG_VER);
 
-                            // call the callback, if given
+                            // Call the callback, if given
                             _.isFunction(cb) && cb(null, path);
                         });
                     });
@@ -288,7 +288,7 @@ define(function(require, exports, module) {
         }
 
         function load() {
-            // don't allow users to see "Save Runner?" dialog
+            // Don't allow users to see "Save Runner?" dialog
             settings.set("user/output/nosavequestion", "true");
 
             // Monitors a shim started on the command line.
@@ -313,7 +313,7 @@ define(function(require, exports, module) {
                 retryInterval: 300
             }, run);
 
-            // create commands that can be called from `c9 exec`
+            // Create commands that can be called from `c9 exec`
             commands.addCommand({
                 name: "startDebugger",
                 hint: "Kickstart debugger from CLI",
@@ -332,14 +332,14 @@ define(function(require, exports, module) {
                 name: "breakpoint_set",
                 hint: "Check if source file has at least a breakpoint",
                 group: "Run & Debug",
-                exec: function(args) {
+                exec(args) {
                     if (args.length !== 2)
                         return false;
 
-                    // check if at least one breakpoint is set in the source file provided
-                    return breakpoints.breakpoints.some(function(breakpoint) {
+                    // Check if at least one breakpoint is set in the source file provided
+                    return breakpoints.breakpoints.some(breakpoint => {
 
-                        // slash at the beginning means ~/workspace/
+                        // Slash at the beginning means ~/workspace/
                         return breakpoint.path.replace(/^\//, c9.environmentDir + "/").replace(/^~/, c9.home) == args[1];
                     });
                 }
@@ -347,16 +347,16 @@ define(function(require, exports, module) {
 
             writeDebug50();
 
-            // try to restore state if a running process
+            // Try to restore state if a running process
             restoreProcess();
         }
 
         /***** Lifecycle *****/
 
-        plugin.on("load", function() {
+        plugin.on("load", () => {
             load();
         });
-        plugin.on("unload", function() {
+        plugin.on("unload", () => {
             process = null;
         });
 
