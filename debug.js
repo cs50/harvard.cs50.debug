@@ -51,7 +51,7 @@ define(function(require, exports, module) {
         const IKP3DB_PORT = 15473;
 
         // version of debug50 file
-        const DEBUG_VER = 18;
+        const DEBUG_VER = 19;
 
         /***** Methods *****/
 
