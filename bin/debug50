@@ -33,7 +33,7 @@ fi
 PID=$$
 
 if [[ "$1" = *.py || $(head --lines=1 "$1") =~ ^#!.*python.*$ ]]; then
-    trap "python -m ikp3db --ikpdb-port=15473 --ikpdb-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
+    trap "python -m ikp3db --ikpdb-port=15473 --ikpdb-working-directory='$HOME/workspace' --ikpdb-client-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
 
     # give PID to proxy for monitoring
     ERR=$($C9 exec startDebugger ikp3db $PID)
