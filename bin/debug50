@@ -32,7 +32,21 @@ fi
 # PID of current execution
 PID=$$
 
+
+breakpoint_set() {
+    return $(test -z "$($C9 exec  breakpoint_set "$1")")
+}
+
+no_breakpoints() {
+    echo "Looks like you haven't set any breakpoints. Set at least one breakpoint by clicking to the left of a line number and then re-run debug50!"
+    exit 1
+}
+
 if [[ "$1" = *.py || $(head --lines=1 "$1") =~ ^#!.*python.*$ ]]; then
+    if ! breakpoint_set "$(readlink --canonicalize-existing "$1")"; then
+        no_breakpoints
+    fi
+
     trap "python -m ikp3db --ikpdb-port=15473 --ikpdb-working-directory='$HOME/workspace' --ikpdb-client-working-directory='$(pwd)' $*; $C9 exec stopDebugger $PID; echo; exit 0" SIGUSR1
 
     # give PID to proxy for monitoring
@@ -65,7 +79,7 @@ EOF
 
         # check for breakpoints in current source file
         if [ "$breakpoint" = false ]; then
-            if [ -z "$($C9 exec  breakpoint_set "$f")" ]; then
+            if breakpoint_set "$f"; then
                 breakpoint=true
             fi
         fi
@@ -76,8 +90,7 @@ EOF
 
     # no breakpoints found
     if [ "$breakpoint" = false ]; then
-        echo "Looks like you haven't set any breakpoints. Set at least one breakpoint by clicking to the left of a line number and then re-run debug50!"
-        exit 1
+        no_breakpoints
     fi
 
     # SIGUSR1 signals to begin the shim
