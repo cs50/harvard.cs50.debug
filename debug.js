@@ -50,9 +50,6 @@ define(function(require, exports, module) {
         // Netcat proxy target port
         const IKP3DB_PORT = 15473;
 
-        // Version of debug50 file
-        const DEBUG_VER = 18;
-
         /***** Methods *****/
 
         /**
@@ -232,60 +229,6 @@ define(function(require, exports, module) {
             });
         }
 
-        /**
-         * Callback to be called after writing debug50
-         *
-         * @callback cb
-         * @param err an error in case of failure
-         * @param path debug50's path
-         */
-
-        /**
-         * Writes and updates debug50 script when should
-         *
-         * @param [cb] a callback to call after debug50's been written
-         */
-        function writeDebug50(cb) {
-            // Debug50's path on the system
-            const path = "~/.cs50/bin/debug50";
-
-            // Ensure debug50 doesn't exist
-            fs.exists(path, exists => {
-                // Fetch the currently set version
-                const ver = settings.getNumber(SETTING_VER);
-
-                // Write debug50 when should
-                if (!exists || isNaN(ver) || ver < DEBUG_VER) {
-                    // Retrive debug50's contents
-                    const content = require("text!./bin/debug50");
-
-                    // Write debug50
-                    fs.writeFile(path, content, (err) => {
-                        if (err) {
-                            console.error(err);
-                            return _.isFunction(cb) && cb(err);
-                        }
-
-                        // chmod debug50
-                        fs.chmod(path, 755, err => {
-                            if (err) {
-                                console.error(err);
-                                return _.isFunction(cb) && cb(err);
-                            }
-
-                            // Set or update version
-                            settings.set(SETTING_VER, DEBUG_VER);
-
-                            // Call the callback, if given
-                            _.isFunction(cb) && cb(null, path);
-                        });
-                    });
-                }
-                else if (exists && _.isFunction(cb)) {
-                    cb(null, path);
-                }
-            });
-        }
 
         function load() {
             // Don't allow users to see "Save Runner?" dialog
@@ -344,8 +287,6 @@ define(function(require, exports, module) {
                     });
                 }
             }, plugin);
-
-            writeDebug50();
 
             // Try to restore state if a running process
             restoreProcess();
