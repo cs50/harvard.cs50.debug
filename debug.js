@@ -20,8 +20,6 @@ define(function(require, exports, module) {
         const showError = imports["dialog.error"].show;
         const settings = imports.settings;
 
-        const _ = require("lodash");
-
         /***** Initialization *****/
         const plugin = new Plugin("Ajax.org", main.consumes);
         let process = {};
