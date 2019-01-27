@@ -46,7 +46,7 @@ define(function(require, exports, module) {
         const PROXY_SOURCE_PORT = 15471;
 
         // Netcat proxy target port
-        const IKP3DB_PORT = 15472;
+        const IKP3DB_PORT = 15473;
 
         /***** Methods *****/
 
