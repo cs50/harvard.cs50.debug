@@ -42,11 +42,8 @@ define(function(require, exports, module) {
         // created by debug50 if doesn't exist
         const NAMED_PIPE = "/home/ubuntu/.c9/ikp3dbpipe";
 
-        // Netcat proxy source port
-        const PROXY_SOURCE_PORT = 15471;
-
-        // Netcat proxy target port
-        const IKP3DB_PORT = 15473;
+        // Debug port
+        const IKP3DB_PORT = 15472;
 
         /***** Methods *****/
 
@@ -245,9 +242,9 @@ define(function(require, exports, module) {
 
             run.addRunner("IKP3DBMonitor", {
                 caption: "IKP3DBMonitor",
-                script: [`{ nc -k -l ${PROXY_SOURCE_PORT} <${NAMED_PIPE} | nc 127.0.0.1 ${IKP3DB_PORT} >${NAMED_PIPE} & }; PID=$!; while kill -0 $args ; do sleep 1; done; kill -9 $args `],
+                script: ["while kill -0 $args; do sleep 1; done"],
                 debugger: "ikpdb",
-                debugport: PROXY_SOURCE_PORT,
+                debugport: IKP3DB_PORT,
                 maxdepth: 50,
                 $debugDefaultState: true,
                 retryCount: 100,
